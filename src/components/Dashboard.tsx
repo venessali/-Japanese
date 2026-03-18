@@ -1,16 +1,74 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { LearningLog, Vocabulary, Grammar } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Calendar, TrendingUp, Award, Clock, BookOpen } from 'lucide-react';
+import { Calendar, TrendingUp, Award, Clock, BookOpen, Download, Upload } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface DashboardProps {
   logs: LearningLog[];
   vocabList: Vocabulary[];
   grammarList: Grammar[];
   compact?: boolean;
+  onImportData?: (data: { vocabList: Vocabulary[], grammarList: Grammar[], logs: LearningLog[] }) => void;
 }
 
-export function Dashboard({ logs, vocabList, grammarList, compact = false }: DashboardProps) {
+export function Dashboard({ logs, vocabList, grammarList, compact = false, onImportData }: DashboardProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    const data = {
+      vocabList,
+      grammarList,
+      logs,
+      exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `komorebi-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const parsedData = JSON.parse(content);
+        
+        if (parsedData.vocabList && parsedData.grammarList && parsedData.logs && onImportData) {
+          if (window.confirm('导入数据将覆盖当前的所有学习记录，确定要继续吗？')) {
+            onImportData({
+              vocabList: parsedData.vocabList,
+              grammarList: parsedData.grammarList,
+              logs: parsedData.logs
+            });
+            alert('数据导入成功！');
+          }
+        } else {
+          alert('文件格式不正确，请选择有效的备份文件。');
+        }
+      } catch (error) {
+        console.error('Import error:', error);
+        alert('读取文件失败，请确保文件格式正确。');
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const chartData = logs.length > 0 ? logs : [
     { date: 'Mon', vocabLearned: 5, grammarLearned: 1 },
     { date: 'Tue', vocabLearned: 12, grammarLearned: 2 },
@@ -83,6 +141,30 @@ export function Dashboard({ logs, vocabList, grammarList, compact = false }: Das
         <div className="flex items-center gap-3 mb-6">
           <span className="text-2xl font-bold text-pink-600">学习看板</span>
           <span className="text-sm text-pink-500 font-medium bg-pink-50 px-2 py-1 rounded-full">Dashboard</span>
+        </div>
+
+        <div className="flex items-center gap-2 mb-6">
+          <input 
+            type="file" 
+            accept=".json" 
+            className="hidden" 
+            ref={fileInputRef}
+            onChange={handleImport}
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 rounded-xl transition-colors"
+          >
+            <Upload size={16} />
+            导入数据
+          </button>
+          <button 
+            onClick={handleExport}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-pink-500 hover:bg-pink-600 rounded-xl transition-colors shadow-sm"
+          >
+            <Download size={16} />
+            导出备份
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

@@ -94,6 +94,12 @@ export default function App() {
     setGrammarList(prev => prev.filter(g => g.id !== id));
   };
 
+  const handleImportData = (data: { vocabList: Vocabulary[], grammarList: Grammar[], logs: LearningLog[] }) => {
+    setVocabList(data.vocabList);
+    setGrammarList(data.grammarList);
+    setLogs(data.logs);
+  };
+
   return (
     <div className="min-h-screen bg-orange-50/50 font-sans text-gray-800 selection:bg-orange-200 selection:text-orange-900">
       <DictionaryPopup />
@@ -171,7 +177,7 @@ export default function App() {
 
         {activeTab === 'dashboard' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Dashboard logs={logs} vocabList={vocabList} grammarList={grammarList} />
+            <Dashboard logs={logs} vocabList={vocabList} grammarList={grammarList} onImportData={handleImportData} />
           </div>
         )}
 
