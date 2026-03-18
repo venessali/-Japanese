@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, Loader2 } from 'lucide-react';
 
-export function DictionaryPopup() {
+interface DictionaryPopupProps {
+  apiKey?: string;
+}
+
+export function DictionaryPopup({ apiKey }: DictionaryPopupProps) {
   const [selectedText, setSelectedText] = useState('');
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isOpen, setIsOpen] = useState(false);
@@ -51,7 +55,7 @@ export function DictionaryPopup() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, apiKey }),
       });
 
       if (!response.ok) {

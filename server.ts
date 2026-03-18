@@ -10,26 +10,22 @@ async function startServer() {
   app.use(express.json());
 
   // Initialize OpenAI client for DeepSeek
-  let openaiClient: OpenAI | null = null;
-  function getOpenAI() {
-    if (!openaiClient) {
-      const key = process.env.DEEPSEEK_API_KEY;
-      if (!key) {
-        throw new Error("DEEPSEEK_API_KEY environment variable is required");
-      }
-      openaiClient = new OpenAI({
-        apiKey: key,
-        baseURL: "https://api.deepseek.com", // DeepSeek API base URL
-      });
+  function getOpenAI(userApiKey?: string) {
+    const key = userApiKey || process.env.DEEPSEEK_API_KEY;
+    if (!key) {
+      throw new Error("请先在设置中绑定您的 DeepSeek API Key");
     }
-    return openaiClient;
+    return new OpenAI({
+      apiKey: key,
+      baseURL: "https://api.deepseek.com", // DeepSeek API base URL
+    });
   }
 
   // API Routes
   app.post("/api/quiz", async (req, res) => {
     try {
-      const { vocabList, grammarList, customPrompt } = req.body;
-      const openai = getOpenAI();
+      const { vocabList, grammarList, customPrompt, apiKey } = req.body;
+      const openai = getOpenAI(apiKey);
 
       const defaultSystemPrompt = `You are a fun, energetic (genki) Japanese teacher. 
 Create a short quiz based on the user's vocabulary and grammar list.
@@ -60,8 +56,8 @@ Be very encouraging and use emoticons like (≧◡≦) or (´• ω •\`)!`;
 
   app.post("/api/dictionary", async (req, res) => {
     try {
-      const { text } = req.body;
-      const openai = getOpenAI();
+      const { text, apiKey } = req.body;
+      const openai = getOpenAI(apiKey);
 
       const response = await openai.chat.completions.create({
         model: "deepseek-chat",

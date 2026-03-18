@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "deepseekApiKey": { "type": "string" }
+      }
+    },
+    "Vocabulary": {
+      "title": "Vocabulary",
+      "description": "Vocabulary item",
+      "type": "object",
+      "properties": {
+        "word": { "type": "string" },
+        "reading": { "type": "string" },
+        "pitchAccent": { "type": "string" },
+        "meaning": { "type": "string" },
+        "tag": { "type": "string" },
+        "sourceUrl": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "lastReviewed": { "type": "number" },
+        "uid": { "type": "string" }
+      },
+      "required": ["word", "reading", "meaning", "tag", "createdAt", "lastReviewed", "uid"]
+    },
+    "Grammar": {
+      "title": "Grammar",
+      "description": "Grammar item",
+      "type": "object",
+      "properties": {
+        "pattern": { "type": "string" },
+        "meaning": { "type": "string" },
+        "example": { "type": "string" },
+        "sourceUrl": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "uid": { "type": "string" }
+      },
+      "required": ["pattern", "meaning", "example", "createdAt", "uid"]
+    },
+    "LearningLog": {
+      "title": "LearningLog",
+      "description": "Daily learning log",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "vocabLearned": { "type": "number" },
+        "grammarLearned": { "type": "number" },
+        "quizzesTaken": { "type": "number" },
+        "uid": { "type": "string" }
+      },
+      "required": ["date", "vocabLearned", "grammarLearned", "quizzesTaken", "uid"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "users/{userId}/vocab/{vocabId}": {
+      "schema": { "$ref": "#/entities/Vocabulary" },
+      "description": "User's vocabulary list"
+    },
+    "users/{userId}/grammar/{grammarId}": {
+      "schema": { "$ref": "#/entities/Grammar" },
+      "description": "User's grammar list"
+    },
+    "users/{userId}/logs/{logId}": {
+      "schema": { "$ref": "#/entities/LearningLog" },
+      "description": "User's learning logs"
+    }
+  }
+}

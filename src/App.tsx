@@ -5,104 +5,148 @@ import { GrammarSection } from './components/GrammarSection';
 import { Dashboard } from './components/Dashboard';
 import { AIQuiz } from './components/AIQuiz';
 import { DictionaryPopup } from './components/DictionaryPopup';
+import { LoginScreen } from './components/LoginScreen';
+import { SettingsModal } from './components/SettingsModal';
 import { Vocabulary, Grammar, VocabTag, LearningLog } from './types';
 import { format } from 'date-fns';
-import { Trees, Sun, BookOpen, LayoutDashboard, BrainCircuit, Home } from 'lucide-react';
+import { Trees, Sun, BookOpen, LayoutDashboard, BrainCircuit, Home, LogOut, Settings } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import { db } from './firebase';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 export default function App() {
+  const { user, profile, logout } = useAuth();
   const [vocabList, setVocabList] = useState<Vocabulary[]>([]);
   const [grammarList, setGrammarList] = useState<Grammar[]>([]);
   const [logs, setLogs] = useState<LearningLog[]>([]);
   const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'study' | 'quiz'>('home');
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Load data from localStorage on mount
+  // Sync data from Firestore when user logs in
   useEffect(() => {
-    const savedVocab = localStorage.getItem('genki_vocab');
-    const savedGrammar = localStorage.getItem('genki_grammar');
-    const savedLogs = localStorage.getItem('genki_logs');
+    if (!user) {
+      setVocabList([]);
+      setGrammarList([]);
+      setLogs([]);
+      return;
+    }
 
-    if (savedVocab) setVocabList(JSON.parse(savedVocab));
-    if (savedGrammar) setGrammarList(JSON.parse(savedGrammar));
-    if (savedLogs) setLogs(JSON.parse(savedLogs));
-  }, []);
+    const vocabRef = collection(db, 'users', user.uid, 'vocab');
+    const grammarRef = collection(db, 'users', user.uid, 'grammar');
+    const logsRef = collection(db, 'users', user.uid, 'logs');
 
-  // Save data to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem('genki_vocab', JSON.stringify(vocabList));
-  }, [vocabList]);
-
-  useEffect(() => {
-    localStorage.setItem('genki_grammar', JSON.stringify(grammarList));
-  }, [grammarList]);
-
-  useEffect(() => {
-    localStorage.setItem('genki_logs', JSON.stringify(logs));
-  }, [logs]);
-
-  // Helper to update daily logs
-  const updateDailyLog = (type: 'vocab' | 'grammar' | 'quiz') => {
-    const today = format(new Date(), 'yyyy-MM-dd');
-    setLogs(prev => {
-      const existingLogIndex = prev.findIndex(log => log.date === today);
-      if (existingLogIndex >= 0) {
-        const newLogs = [...prev];
-        if (type === 'vocab') newLogs[existingLogIndex].vocabLearned += 1;
-        if (type === 'grammar') newLogs[existingLogIndex].grammarLearned += 1;
-        if (type === 'quiz') newLogs[existingLogIndex].quizzesTaken += 1;
-        return newLogs;
-      } else {
-        return [...prev, {
-          date: today,
-          vocabLearned: type === 'vocab' ? 1 : 0,
-          grammarLearned: type === 'grammar' ? 1 : 0,
-          quizzesTaken: type === 'quiz' ? 1 : 0,
-        }];
-      }
+    const unsubVocab = onSnapshot(query(vocabRef, orderBy('createdAt', 'desc')), (snapshot) => {
+      setVocabList(snapshot.docs.map(doc => doc.data() as Vocabulary));
     });
+
+    const unsubGrammar = onSnapshot(query(grammarRef, orderBy('createdAt', 'desc')), (snapshot) => {
+      setGrammarList(snapshot.docs.map(doc => doc.data() as Grammar));
+    });
+
+    const unsubLogs = onSnapshot(query(logsRef, orderBy('date', 'desc')), (snapshot) => {
+      setLogs(snapshot.docs.map(doc => doc.data() as LearningLog));
+    });
+
+    return () => {
+      unsubVocab();
+      unsubGrammar();
+      unsubLogs();
+    };
+  }, [user]);
+
+  // Helper to update daily logs in Firestore
+  const updateDailyLog = async (type: 'vocab' | 'grammar' | 'quiz') => {
+    if (!user) return;
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const logRef = doc(db, 'users', user.uid, 'logs', today);
+    
+    // We use the current state to calculate the new values, but in a real app
+    // we should use a transaction or increment to avoid race conditions.
+    // For simplicity, we'll just update based on current state.
+    const existingLog = logs.find(l => l.date === today);
+    const newLog: LearningLog = existingLog ? { ...existingLog } : {
+      date: today,
+      vocabLearned: 0,
+      grammarLearned: 0,
+      quizzesTaken: 0,
+      uid: user.uid
+    };
+
+    if (type === 'vocab') newLog.vocabLearned += 1;
+    if (type === 'grammar') newLog.grammarLearned += 1;
+    if (type === 'quiz') newLog.quizzesTaken += 1;
+
+    await setDoc(logRef, newLog);
   };
 
-  const handleAddVocab = (vocab: Omit<Vocabulary, 'id' | 'createdAt' | 'lastReviewed'>) => {
+  const handleAddVocab = async (vocab: Omit<Vocabulary, 'id' | 'createdAt' | 'lastReviewed' | 'uid'>) => {
+    if (!user) return;
+    const id = crypto.randomUUID();
     const newVocab: Vocabulary = {
       ...vocab,
-      id: crypto.randomUUID(),
+      id,
       createdAt: Date.now(),
       lastReviewed: Date.now(),
+      uid: user.uid
     };
-    setVocabList(prev => [newVocab, ...prev]);
+    await setDoc(doc(db, 'users', user.uid, 'vocab', id), newVocab);
     updateDailyLog('vocab');
   };
 
-  const handleUpdateVocabTag = (id: string, tag: VocabTag) => {
-    setVocabList(prev => prev.map(v => v.id === id ? { ...v, tag, lastReviewed: Date.now() } : v));
+  const handleUpdateVocabTag = async (id: string, tag: VocabTag) => {
+    if (!user) return;
+    const vocab = vocabList.find(v => v.id === id);
+    if (vocab) {
+      await setDoc(doc(db, 'users', user.uid, 'vocab', id), { ...vocab, tag, lastReviewed: Date.now() }, { merge: true });
+    }
   };
 
-  const handleDeleteVocab = (id: string) => {
-    setVocabList(prev => prev.filter(v => v.id !== id));
+  const handleDeleteVocab = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'vocab', id));
   };
 
-  const handleAddGrammar = (grammar: Omit<Grammar, 'id' | 'createdAt'>) => {
+  const handleAddGrammar = async (grammar: Omit<Grammar, 'id' | 'createdAt' | 'uid'>) => {
+    if (!user) return;
+    const id = crypto.randomUUID();
     const newGrammar: Grammar = {
       ...grammar,
-      id: crypto.randomUUID(),
+      id,
       createdAt: Date.now(),
+      uid: user.uid
     };
-    setGrammarList(prev => [newGrammar, ...prev]);
+    await setDoc(doc(db, 'users', user.uid, 'grammar', id), newGrammar);
     updateDailyLog('grammar');
   };
 
-  const handleDeleteGrammar = (id: string) => {
-    setGrammarList(prev => prev.filter(g => g.id !== id));
+  const handleDeleteGrammar = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'grammar', id));
   };
 
-  const handleImportData = (data: { vocabList: Vocabulary[], grammarList: Grammar[], logs: LearningLog[] }) => {
-    setVocabList(data.vocabList);
-    setGrammarList(data.grammarList);
-    setLogs(data.logs);
+  const handleImportData = async (data: { vocabList: Vocabulary[], grammarList: Grammar[], logs: LearningLog[] }) => {
+    if (!user) return;
+    // For simplicity, we'll just add the imported data to Firestore
+    // Note: This might cause duplicates if the user imports the same file multiple times
+    for (const vocab of data.vocabList) {
+      await setDoc(doc(db, 'users', user.uid, 'vocab', vocab.id), { ...vocab, uid: user.uid });
+    }
+    for (const grammar of data.grammarList) {
+      await setDoc(doc(db, 'users', user.uid, 'grammar', grammar.id), { ...grammar, uid: user.uid });
+    }
+    for (const log of data.logs) {
+      await setDoc(doc(db, 'users', user.uid, 'logs', log.date), { ...log, uid: user.uid });
+    }
   };
+
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-orange-50/50 font-sans text-gray-800 selection:bg-orange-200 selection:text-orange-900">
-      <DictionaryPopup />
+      <DictionaryPopup apiKey={profile?.deepseekApiKey} />
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       
       <header className="bg-white border-b-4 border-orange-100 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -141,6 +185,23 @@ export default function App() {
             >
               <BrainCircuit size={18} /> AI 测验
             </button>
+            
+            <div className="h-6 w-px bg-gray-200 mx-2"></div>
+            
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors hover:bg-gray-50 hover:text-gray-700"
+              title="设置 API Key"
+            >
+              <Settings size={18} />
+            </button>
+            <button 
+              onClick={logout}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors hover:bg-red-50 hover:text-red-500"
+              title="退出登录"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </div>
       </header>
@@ -166,7 +227,7 @@ export default function App() {
                 />
               </div>
               <div className="lg:col-span-7 h-[450px]">
-                <AIQuiz vocabList={vocabList} grammarList={grammarList} />
+                <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} />
               </div>
               <div className="lg:col-span-5 h-[450px]">
                 <Dashboard logs={logs} vocabList={vocabList} grammarList={grammarList} compact={true} />
@@ -203,7 +264,7 @@ export default function App() {
 
         {activeTab === 'quiz' && (
           <div className="h-[calc(100vh-12rem)] max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <AIQuiz vocabList={vocabList} grammarList={grammarList} />
+            <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} />
           </div>
         )}
       </main>

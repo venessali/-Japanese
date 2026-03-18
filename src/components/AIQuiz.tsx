@@ -6,9 +6,10 @@ import { Sparkles, Loader2, PlayCircle, Settings2 } from 'lucide-react';
 interface AIQuizProps {
   vocabList: Vocabulary[];
   grammarList: Grammar[];
+  apiKey?: string;
 }
 
-export function AIQuiz({ vocabList, grammarList }: AIQuizProps) {
+export function AIQuiz({ vocabList, grammarList, apiKey }: AIQuizProps) {
   const [quizContent, setQuizContent] = useState<string>('');
   const [customPrompt, setCustomPrompt] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
@@ -34,6 +35,7 @@ export function AIQuiz({ vocabList, grammarList }: AIQuizProps) {
           vocabList,
           grammarList,
           customPrompt,
+          apiKey
         }),
       });
 

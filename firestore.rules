@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+    
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+    
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function isValidStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+    
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() >= minLen &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser() {
+      return isValidOptionalString('email', 0, 200) &&
+             isValidOptionalString('displayName', 0, 100) &&
+             isValidOptionalString('photoURL', 0, 500) &&
+             isValidOptionalString('deepseekApiKey', 0, 200);
+    }
+
+    function isValidVocab() {
+      return hasRequiredFields(['word', 'reading', 'meaning', 'tag', 'createdAt', 'lastReviewed', 'uid']) &&
+             isValidStringLength('word', 1, 100) &&
+             isValidStringLength('reading', 1, 100) &&
+             isValidStringLength('meaning', 1, 500) &&
+             request.resource.data.tag in ['mastered', 'review', 'learning'] &&
+             request.resource.data.createdAt is number &&
+             request.resource.data.lastReviewed is number &&
+             isValidOptionalString('pitchAccent', 0, 50) &&
+             isValidOptionalString('sourceUrl', 0, 500);
+    }
+
+    function isValidGrammar() {
+      return hasRequiredFields(['pattern', 'meaning', 'example', 'createdAt', 'uid']) &&
+             isValidStringLength('pattern', 1, 200) &&
+             isValidStringLength('meaning', 1, 500) &&
+             isValidStringLength('example', 1, 1000) &&
+             request.resource.data.createdAt is number &&
+             isValidOptionalString('sourceUrl', 0, 500);
+    }
+
+    function isValidLog() {
+      return hasRequiredFields(['date', 'vocabLearned', 'grammarLearned', 'quizzesTaken', 'uid']) &&
+             isValidStringLength('date', 1, 20) &&
+             request.resource.data.vocabLearned is number &&
+             request.resource.data.grammarLearned is number &&
+             request.resource.data.quizzesTaken is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser();
+      allow update: if isOwner(userId) && isValidUser();
+      allow delete: if isOwner(userId);
+      
+      match /vocab/{vocabId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidVocab() && uidUnchanged();
+        allow update: if isOwner(userId) && isValidVocab() && uidNotModified();
+        allow delete: if isOwner(userId);
+      }
+      
+      match /grammar/{grammarId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidGrammar() && uidUnchanged();
+        allow update: if isOwner(userId) && isValidGrammar() && uidNotModified();
+        allow delete: if isOwner(userId);
+      }
+      
+      match /logs/{logId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidLog() && uidUnchanged();
+        allow update: if isOwner(userId) && isValidLog() && uidNotModified();
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
