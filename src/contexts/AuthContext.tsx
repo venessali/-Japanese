@@ -59,9 +59,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      alert('登录失败，请重试。');
+      if (error.code === 'auth/unauthorized-domain') {
+        alert('登录失败：当前域名未授权。\n\n请前往 Firebase 控制台 -> Authentication -> Settings -> Authorized domains，将您的 Vercel 域名添加进去。');
+      } else {
+        alert(`登录失败：${error.message || '未知错误，请重试'}`);
+      }
     }
   };
 
