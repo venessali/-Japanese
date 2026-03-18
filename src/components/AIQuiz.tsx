@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Markdown from 'react-markdown';
 import { Vocabulary, Grammar } from '../types';
-import { Sparkles, Loader2, PlayCircle, Settings2 } from 'lucide-react';
+import { Sparkles, Loader2, PlayCircle, Settings2, Send } from 'lucide-react';
 
 interface AIQuizProps {
   vocabList: Vocabulary[];
@@ -9,12 +9,27 @@ interface AIQuizProps {
   apiKey?: string;
 }
 
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export function AIQuiz({ vocabList, grammarList, apiKey }: AIQuizProps) {
-  const [quizContent, setQuizContent] = useState<string>('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
   const [customPrompt, setCustomPrompt] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const generateQuiz = async () => {
     if (vocabList.length === 0 && grammarList.length === 0) {
@@ -24,6 +39,7 @@ export function AIQuiz({ vocabList, grammarList, apiKey }: AIQuizProps) {
 
     setIsLoading(true);
     setError(null);
+    setMessages([]);
 
     try {
       const response = await fetch('/api/quiz', {
@@ -32,6 +48,7 @@ export function AIQuiz({ vocabList, grammarList, apiKey }: AIQuizProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          action: 'start',
           vocabList,
           grammarList,
           customPrompt,
@@ -51,11 +68,56 @@ export function AIQuiz({ vocabList, grammarList, apiKey }: AIQuizProps) {
       }
 
       const data = await response.json();
-      setQuizContent(data.text || '生成失败，请重试。');
-      setShowSettings(false); // Hide settings after generating
+      setMessages([{ role: 'assistant', content: data.text || '生成失败，请重试。' }]);
+      setShowSettings(false);
     } catch (err: any) {
       console.error(err);
       setError(err.message || '生成测验时出错，请检查网络或 API Key。');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = { role: 'user', content: input.trim() };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setInput('');
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/quiz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'chat',
+          messages: newMessages,
+          customPrompt,
+          apiKey
+        }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to send message';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `Server error (${response.status}): ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setMessages([...newMessages, { role: 'assistant', content: data.text || '请求失败，请重试。' }]);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || '发送消息时出错，请检查网络或 API Key。');
     } finally {
       setIsLoading(false);
     }
@@ -81,8 +143,8 @@ export function AIQuiz({ vocabList, grammarList, apiKey }: AIQuizProps) {
             disabled={isLoading}
             className="bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white px-4 py-2 rounded-xl shadow-sm transition-colors flex items-center gap-2 font-bold"
           >
-            {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
-            {isLoading ? '生成中...' : '生成测验'}
+            {isLoading && messages.length === 0 ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
+            {messages.length > 0 ? '重新出题' : '生成测验'}
           </button>
         </div>
       </div>
@@ -110,11 +172,32 @@ export function AIQuiz({ vocabList, grammarList, apiKey }: AIQuizProps) {
         </div>
       )}
 
-      <div className="flex-1 bg-amber-50/30 rounded-2xl border-2 border-amber-100 p-6 overflow-y-auto custom-scrollbar min-h-[300px]">
-        {quizContent ? (
-          <div className="markdown-body prose prose-amber max-w-none">
-            <Markdown>{quizContent}</Markdown>
-          </div>
+      <div className="flex-1 bg-amber-50/30 rounded-2xl border-2 border-amber-100 p-4 overflow-y-auto custom-scrollbar min-h-[300px] flex flex-col gap-4">
+        {messages.length > 0 ? (
+          <>
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] rounded-2xl p-4 ${
+                  msg.role === 'user' 
+                    ? 'bg-amber-500 text-white rounded-tr-sm' 
+                    : 'bg-white border-2 border-amber-100 text-gray-800 rounded-tl-sm shadow-sm'
+                }`}>
+                  <div className={`markdown-body prose max-w-none ${msg.role === 'user' ? 'prose-invert' : 'prose-amber'}`}>
+                    <Markdown>{msg.content}</Markdown>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {isLoading && messages.length > 0 && (
+              <div className="flex justify-start">
+                <div className="bg-white border-2 border-amber-100 rounded-2xl p-4 rounded-tl-sm shadow-sm flex items-center gap-2 text-amber-500">
+                  <Loader2 className="animate-spin" size={20} />
+                  <span className="font-medium text-sm">AI 老师正在思考...</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-amber-400/60">
             <PlayCircle size={64} className="mb-4" />
@@ -123,6 +206,27 @@ export function AIQuiz({ vocabList, grammarList, apiKey }: AIQuizProps) {
           </div>
         )}
       </div>
+
+      {messages.length > 0 && (
+        <div className="mt-4 flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="输入你的答案..."
+            disabled={isLoading}
+            className="flex-1 bg-white border-2 border-amber-200 rounded-xl p-3 text-gray-700 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all disabled:opacity-50"
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={!input.trim() || isLoading}
+            className="bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white px-4 py-2 rounded-xl shadow-sm transition-colors flex items-center justify-center"
+          >
+            <Send size={20} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

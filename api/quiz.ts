@@ -17,7 +17,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { vocabList, grammarList, customPrompt, apiKey } = req.body;
+    const { vocabList, grammarList, customPrompt, apiKey, messages, action } = req.body;
     const key = apiKey || process.env.DEEPSEEK_API_KEY;
     
     if (!key) {
@@ -29,23 +29,33 @@ export default async function handler(req: any, res: any) {
       baseURL: "https://api.deepseek.com",
     });
 
-    const defaultSystemPrompt = `You are a fun, energetic (genki) Japanese teacher. 
-Create a short quiz based on the user's vocabulary and grammar list.
-Include 3-5 questions. Use markdown. Hide answers in a <details> tag.
-Be very encouraging and use emoticons like (≧◡≦) or (´• ω •\`)!`;
+    const systemPrompt = `You are a fun, energetic (genki) Japanese teacher.
+You are conducting a multi-turn interactive quiz.
+Rules:
+1. If the user asks to start a quiz, generate 3-5 questions based on their vocabulary and grammar list. DO NOT provide the answers yet. Ask the user to reply with their answers.
+2. When the user replies with their answers, evaluate them carefully. Point out any mistakes, explain the corrections gently, and give a final score. Use emoticons like (≧◡≦) or (´• ω •\`)!
+3. Keep the formatting clean using Markdown.
+
+User's Data Context:
+Vocabulary: ${JSON.stringify(vocabList || [])}
+Grammar: ${JSON.stringify(grammarList || [])}`;
 
     const finalSystemPrompt = customPrompt 
-      ? `${defaultSystemPrompt}\n\nUser Preferences/Requirements:\n${customPrompt}`
-      : defaultSystemPrompt;
+      ? `${systemPrompt}\n\nUser Preferences/Requirements:\n${customPrompt}`
+      : systemPrompt;
 
-    const userMessage = `Vocabulary:\n${JSON.stringify(vocabList)}\n\nGrammar:\n${JSON.stringify(grammarList)}\n\nPlease generate the quiz now.`;
+    let apiMessages: any[] = [{ role: "system", content: finalSystemPrompt }];
+
+    if (action === 'start') {
+      const userMessage = `Please generate the quiz questions now based on my data. Remember, DO NOT show the answers yet. Wait for my reply.`;
+      apiMessages.push({ role: "user", content: userMessage });
+    } else if (action === 'chat') {
+      apiMessages = apiMessages.concat(messages);
+    }
 
     const response = await openai.chat.completions.create({
       model: "deepseek-chat",
-      messages: [
-        { role: "system", content: finalSystemPrompt },
-        { role: "user", content: userMessage }
-      ],
+      messages: apiMessages,
       temperature: 0.7,
     });
 

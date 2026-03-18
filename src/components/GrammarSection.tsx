@@ -6,9 +6,10 @@ interface GrammarSectionProps {
   grammarList: Grammar[];
   onAddGrammar: (grammar: Omit<Grammar, 'id' | 'createdAt'>) => void;
   onDeleteGrammar: (id: string) => void;
+  onViewAll?: () => void;
 }
 
-export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar }: GrammarSectionProps) {
+export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onViewAll }: GrammarSectionProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newPattern, setNewPattern] = useState('');
   const [newMeaning, setNewMeaning] = useState('');
@@ -38,12 +39,22 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar }: G
           <span className="text-2xl font-bold text-lime-600">语法笔记</span>
           <span className="text-sm text-lime-500 font-medium bg-lime-50 px-2 py-1 rounded-full">Grammar</span>
         </div>
-        <button
-          onClick={() => setIsAdding(!isAdding)}
-          className="bg-lime-500 hover:bg-lime-600 text-white p-2 rounded-xl shadow-sm transition-colors"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex items-center gap-2">
+          {onViewAll && (
+            <button
+              onClick={onViewAll}
+              className="text-lime-500 hover:bg-lime-50 px-3 py-2 rounded-xl text-sm font-bold transition-colors"
+            >
+              查看全部
+            </button>
+          )}
+          <button
+            onClick={() => setIsAdding(!isAdding)}
+            className="bg-lime-500 hover:bg-lime-600 text-white p-2 rounded-xl shadow-sm transition-colors"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       </div>
 
       {isAdding && (

@@ -7,6 +7,7 @@ interface VocabKanbanProps {
   onAddVocab: (vocab: Omit<Vocabulary, 'id' | 'createdAt' | 'lastReviewed'>) => void;
   onUpdateTag: (id: string, tag: VocabTag) => void;
   onDeleteVocab: (id: string) => void;
+  onViewAll?: () => void;
 }
 
 const TAG_CONFIG = {
@@ -15,7 +16,7 @@ const TAG_CONFIG = {
   learning: { label: '完全没学会', icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' },
 };
 
-export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab }: VocabKanbanProps) {
+export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab, onViewAll }: VocabKanbanProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [newReading, setNewReading] = useState('');
@@ -119,12 +120,22 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab 
           <span className="text-2xl font-bold text-sky-600">词汇看板</span>
           <span className="text-sm text-sky-400 font-medium bg-sky-50 px-2 py-1 rounded-full">Vocabulary</span>
         </div>
-        <button
-          onClick={() => setIsAdding(!isAdding)}
-          className="bg-sky-500 hover:bg-sky-600 text-white p-2 rounded-xl shadow-sm transition-colors"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex items-center gap-2">
+          {onViewAll && (
+            <button
+              onClick={onViewAll}
+              className="text-sky-500 hover:bg-sky-50 px-3 py-2 rounded-xl text-sm font-bold transition-colors"
+            >
+              查看全部
+            </button>
+          )}
+          <button
+            onClick={() => setIsAdding(!isAdding)}
+            className="bg-sky-500 hover:bg-sky-600 text-white p-2 rounded-xl shadow-sm transition-colors"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       </div>
 
       {isAdding && (

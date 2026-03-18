@@ -3,6 +3,7 @@ import { GojuonChart } from './components/GojuonChart';
 import { VocabKanban } from './components/VocabKanban';
 import { GrammarSection } from './components/GrammarSection';
 import { Dashboard } from './components/Dashboard';
+import { StudyCenter } from './components/StudyCenter';
 import { AIQuiz } from './components/AIQuiz';
 import { DictionaryPopup } from './components/DictionaryPopup';
 import { LoginScreen } from './components/LoginScreen';
@@ -124,6 +125,22 @@ export default function App() {
     await deleteDoc(doc(db, 'users', user.uid, 'grammar', id));
   };
 
+  const handleEditVocab = async (id: string, updates: Partial<Vocabulary>) => {
+    if (!user) return;
+    const vocab = vocabList.find(v => v.id === id);
+    if (vocab) {
+      await setDoc(doc(db, 'users', user.uid, 'vocab', id), { ...vocab, ...updates, lastReviewed: Date.now() }, { merge: true });
+    }
+  };
+
+  const handleEditGrammar = async (id: string, updates: Partial<Grammar>) => {
+    if (!user) return;
+    const grammar = grammarList.find(g => g.id === id);
+    if (grammar) {
+      await setDoc(doc(db, 'users', user.uid, 'grammar', id), { ...grammar, ...updates }, { merge: true });
+    }
+  };
+
   const handleImportData = async (data: { vocabList: Vocabulary[], grammarList: Grammar[], logs: LearningLog[] }) => {
     if (!user) return;
     // For simplicity, we'll just add the imported data to Firestore
@@ -217,6 +234,7 @@ export default function App() {
                   onAddVocab={handleAddVocab}
                   onUpdateTag={handleUpdateVocabTag}
                   onDeleteVocab={handleDeleteVocab}
+                  onViewAll={() => setActiveTab('study')}
                 />
               </div>
               <div className="lg:col-span-5 h-[500px]">
@@ -224,6 +242,7 @@ export default function App() {
                   grammarList={grammarList}
                   onAddGrammar={handleAddGrammar}
                   onDeleteGrammar={handleDeleteGrammar}
+                  onViewAll={() => setActiveTab('study')}
                 />
               </div>
               <div className="lg:col-span-7 h-[450px]">
@@ -243,22 +262,18 @@ export default function App() {
         )}
 
         {activeTab === 'study' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-12rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="lg:col-span-7 h-full">
-              <VocabKanban
-                vocabList={vocabList}
-                onAddVocab={handleAddVocab}
-                onUpdateTag={handleUpdateVocabTag}
-                onDeleteVocab={handleDeleteVocab}
-              />
-            </div>
-            <div className="lg:col-span-5 h-full">
-              <GrammarSection
-                grammarList={grammarList}
-                onAddGrammar={handleAddGrammar}
-                onDeleteGrammar={handleDeleteGrammar}
-              />
-            </div>
+          <div className="h-[calc(100vh-12rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <StudyCenter
+              vocabList={vocabList}
+              grammarList={grammarList}
+              onAddVocab={handleAddVocab}
+              onUpdateVocabTag={handleUpdateVocabTag}
+              onDeleteVocab={handleDeleteVocab}
+              onEditVocab={handleEditVocab}
+              onAddGrammar={handleAddGrammar}
+              onDeleteGrammar={handleDeleteGrammar}
+              onEditGrammar={handleEditGrammar}
+            />
           </div>
         )}
 

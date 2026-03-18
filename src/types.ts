@@ -10,6 +10,8 @@ export interface Vocabulary {
   sourceUrl?: string;
   createdAt: number;
   lastReviewed: number;
+  uid?: string;
+  notes?: string;
 }
 
 export interface Grammar {
@@ -19,6 +21,8 @@ export interface Grammar {
   example: string;
   sourceUrl?: string;
   createdAt: number;
+  uid?: string;
+  notes?: string;
 }
 
 export interface LearningLog {
