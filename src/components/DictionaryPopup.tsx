@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, Loader2 } from 'lucide-react';
 
@@ -47,18 +46,24 @@ export function DictionaryPopup() {
     setIsLoading(true);
     setExplanation('');
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `请简短解释这个日语词汇或短语的意思、读音（平假名/罗马音），并给出一个简单的例句：\n\n"${text}"\n\n请保持回答简明扼要，适合初学者。`;
-      
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
+      const response = await fetch('/api/dictionary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
       });
-      
-      setExplanation(response.text || '无法获取解释。');
-    } catch (err) {
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch explanation');
+      }
+
+      const data = await response.json();
+      setExplanation(data.text || '无法获取解释。');
+    } catch (err: any) {
       console.error(err);
-      setExplanation('查询失败，请检查网络或 API Key。');
+      setExplanation(err.message || '查询失败，请检查网络或 API Key。');
     } finally {
       setIsLoading(false);
     }
