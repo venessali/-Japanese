@@ -203,7 +203,7 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
         </form>
       )}
 
-      <div className="flex gap-4 overflow-x-auto pb-2 h-full min-h-[400px]">
+      <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0">
         {renderColumn('learning')}
         {renderColumn('review')}
         {renderColumn('mastered')}

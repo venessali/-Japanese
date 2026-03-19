@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, Loader2 } from 'lucide-react';
+import Markdown from 'react-markdown';
 
 interface DictionaryPopupProps {
   apiKey?: string;
@@ -117,8 +118,8 @@ export function DictionaryPopup({ apiKey }: DictionaryPopupProps) {
                 <span className="text-sm font-medium">AI 正在查询中...</span>
               </div>
             ) : (
-              <div className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
-                {explanation}
+              <div className="markdown-body prose prose-indigo prose-sm max-w-none text-gray-600 leading-relaxed">
+                <Markdown>{explanation}</Markdown>
               </div>
             )}
           </div>

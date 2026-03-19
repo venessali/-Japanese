@@ -147,7 +147,7 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
         })}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar min-h-[400px]">
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar min-h-0">
         {filteredList.map((grammar) => (
           <div key={grammar.id} className="bg-lime-50/50 p-5 rounded-2xl border-2 border-lime-100 hover:border-lime-300 transition-colors group relative">
             <div className="flex justify-between items-start mb-2">

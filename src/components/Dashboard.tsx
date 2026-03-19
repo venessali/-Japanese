@@ -83,50 +83,50 @@ export function Dashboard({ logs, vocabList, grammarList, compact = false, onImp
 
   if (compact) {
     return (
-      <div className="bg-white rounded-3xl shadow-sm border-4 border-pink-100 p-6 h-full flex flex-col">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="text-2xl font-bold text-pink-600">学习看板</span>
-          <span className="text-sm text-pink-500 font-medium bg-pink-50 px-2 py-1 rounded-full">Dashboard</span>
+      <div className="bg-white rounded-2xl shadow-sm border-2 border-pink-100 p-4 h-full flex flex-col">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xl font-bold text-pink-600">学习看板</span>
+          <span className="text-[10px] text-pink-500 font-medium bg-pink-50 px-1.5 py-0.5 rounded-full">Dashboard</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-pink-50 rounded-2xl p-4 border-2 border-pink-100 flex items-center gap-4">
-            <div className="bg-white p-3 rounded-xl text-pink-500 shadow-sm">
-              <TrendingUp size={24} />
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="bg-pink-50 rounded-xl p-2.5 border border-pink-100 flex items-center gap-3">
+            <div className="bg-white p-2 rounded-lg text-pink-500 shadow-sm">
+              <TrendingUp size={18} />
             </div>
             <div>
-              <div className="text-sm text-pink-600 font-medium">总词汇量</div>
-              <div className="text-2xl font-black text-gray-800">{vocabList.length}</div>
+              <div className="text-[10px] text-pink-600 font-medium">总词汇量</div>
+              <div className="text-lg font-black text-gray-800 leading-tight">{vocabList.length}</div>
             </div>
           </div>
-          <div className="bg-purple-50 rounded-2xl p-4 border-2 border-purple-100 flex items-center gap-4">
-            <div className="bg-white p-3 rounded-xl text-purple-500 shadow-sm">
-              <Award size={24} />
+          <div className="bg-purple-50 rounded-xl p-2.5 border border-purple-100 flex items-center gap-3">
+            <div className="bg-white p-2 rounded-lg text-purple-500 shadow-sm">
+              <Award size={18} />
             </div>
             <div>
-              <div className="text-sm text-purple-600 font-medium">总语法数</div>
-              <div className="text-2xl font-black text-gray-800">{grammarList.length}</div>
+              <div className="text-[10px] text-purple-600 font-medium">总语法数</div>
+              <div className="text-lg font-black text-gray-800 leading-tight">{grammarList.length}</div>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 bg-white rounded-2xl border-2 border-gray-100 p-4 relative min-h-[200px]">
-          <h4 className="text-sm font-bold text-gray-500 mb-4 flex items-center gap-2">
-            <Calendar size={16} />
+        <div className="flex-1 bg-white rounded-xl border border-gray-100 p-2 relative min-h-[120px]">
+          <h4 className="text-[10px] font-bold text-gray-500 mb-2 flex items-center gap-1.5">
+            <Calendar size={12} />
             近期学习趋势
           </h4>
-          <div className="absolute inset-0 pt-12 pb-4 px-4">
+          <div className="absolute inset-0 pt-8 pb-2 px-2">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} width={30} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} width={20} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  cursor={{ stroke: '#fbcfe8', strokeWidth: 2 }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 2px 4px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+                  cursor={{ stroke: '#fbcfe8', strokeWidth: 1 }}
                 />
-                <Line type="monotone" dataKey="vocabLearned" name="词汇" stroke="#ec4899" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="grammarLearned" name="语法" stroke="#a855f7" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="vocabLearned" name="词汇" stroke="#ec4899" strokeWidth={2} dot={{ r: 2, strokeWidth: 1 }} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="grammarLearned" name="语法" stroke="#a855f7" strokeWidth={2} dot={{ r: 2, strokeWidth: 1 }} activeDot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

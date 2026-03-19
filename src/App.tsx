@@ -282,10 +282,10 @@ export default function App() {
                   onUpdateVocabTag={handleUpdateVocabTag} 
                 />
               </div>
-              <div className="lg:col-span-7 h-[450px]">
+              <div className="lg:col-span-4 h-[300px]">
                 <LearningCalendar logs={logs} />
               </div>
-              <div className="lg:col-span-5 h-[450px]">
+              <div className="lg:col-span-8 h-[300px]">
                 <Dashboard logs={logs} vocabList={vocabList} grammarList={grammarList} compact={true} />
               </div>
             </div>
