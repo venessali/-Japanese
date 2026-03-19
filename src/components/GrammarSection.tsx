@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Grammar, VocabTag } from '../types';
-import { Plus, BookOpen, ExternalLink, Trash2, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Plus, BookOpen, ExternalLink, Trash2, CheckCircle2, Clock, XCircle, Wand2, Loader2 } from 'lucide-react';
 import { GrammarDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
+import { GoogleGenAI, Type } from '@google/genai';
 
 interface GrammarSectionProps {
   grammarList: Grammar[];
@@ -29,6 +30,50 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
   const [filterTag, setFilterTag] = useState<VocabTag | 'all'>('all');
   const [selectedGrammar, setSelectedGrammar] = useState<Grammar | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+
+  const handleAILookup = async () => {
+    const patternToLookup = newPattern.trim();
+    if (!patternToLookup || isLookingUp) return;
+    
+    setIsLookingUp(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `请为日语语法句型 "${patternToLookup}" 提供详细解释。
+        要求：
+        1. 必须使用中文回答。
+        2. 返回 JSON 格式。
+        3. 字段说明：
+           - meaning: 语法的中文意思。
+           - example: 包含一个日语例句及其对应的中文翻译。
+           - notes: 包含语法的接续方式、使用注意点等中文说明。
+        4. 严禁在任何字段中包含 "AI生成"、"根据查询" 等类似字样，直接输出内容。`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              meaning: { type: Type.STRING },
+              example: { type: Type.STRING },
+              notes: { type: Type.STRING }
+            },
+            required: ['meaning', 'example']
+          }
+        }
+      });
+
+      const data = JSON.parse(response.text);
+      if (data.meaning) setNewMeaning(data.meaning);
+      if (data.example) setNewExample(data.example);
+      if (data.notes) setNewNotes(data.notes);
+    } catch (error) {
+      console.error("AI Lookup failed:", error);
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,14 +123,25 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
 
       {isAdding && (
         <form onSubmit={handleAdd} className="mb-6 bg-lime-50 p-4 rounded-2xl border-2 border-lime-200 space-y-3">
-          <input
-            type="text"
-            placeholder="语法句型 (e.g. 〜てはいけません)"
-            value={newPattern}
-            onChange={(e) => setNewPattern(e.target.value)}
-            className="px-3 py-2 rounded-xl border-2 border-white focus:border-lime-300 outline-none w-full font-bold text-lg"
-            required
-          />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="语法句型 (e.g. 〜てはいけません)"
+              value={newPattern}
+              onChange={(e) => setNewPattern(e.target.value)}
+              className="px-3 py-2 rounded-xl border-2 border-white focus:border-lime-300 outline-none w-full font-bold text-lg pr-10"
+              required
+            />
+            <button
+              type="button"
+              onClick={handleAILookup}
+              disabled={!newPattern.trim() || isLookingUp}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-lime-500 hover:bg-lime-100 rounded-lg transition-colors disabled:opacity-50"
+              title="AI 智能补全"
+            >
+              {isLookingUp ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
+            </button>
+          </div>
           <input
             type="text"
             placeholder="意思 (e.g. 不可以...)"

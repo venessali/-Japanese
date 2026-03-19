@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Vocabulary, Grammar, VocabTag } from '../types';
-import { BookOpen, Library, Search, Edit2, Trash2, Plus, X, Save } from 'lucide-react';
+import { BookOpen, Library, Search, Edit2, Trash2, Plus, X, Save, Wand2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { VocabDetailModal, GrammarDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
+import { GoogleGenAI, Type } from '@google/genai';
 
 interface StudyCenterProps {
   vocabList: Vocabulary[];
@@ -41,8 +42,124 @@ export function StudyCenter({
 
   const [isAddingVocab, setIsAddingVocab] = useState(false);
   const [isAddingGrammar, setIsAddingGrammar] = useState(false);
-  const [newVocab, setNewVocab] = useState<Partial<Vocabulary>>({ word: '', reading: '', meaning: '', notes: '', tag: 'learning' });
-  const [newGrammar, setNewGrammar] = useState<Partial<Grammar>>({ pattern: '', meaning: '', example: '', notes: '', tag: 'learning' });
+  const [newVocab, setNewVocab] = useState<Partial<Vocabulary>>({ word: '', reading: '', pitchAccent: '', meaning: '', notes: '', tag: 'learning', sourceUrl: '' });
+  const [newGrammar, setNewGrammar] = useState<Partial<Grammar>>({ pattern: '', meaning: '', example: '', notes: '', tag: 'learning', sourceUrl: '' });
+  
+  const [isLookingUp, setIsLookingUp] = useState(false);
+
+  const handleVocabAILookup = async (word: string, isEditing = false) => {
+    const wordToLookup = word.trim();
+    if (!wordToLookup || isLookingUp) return;
+    
+    setIsLookingUp(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `请为日语单词 "${wordToLookup}" 提供详细解释。
+        要求：
+        1. 必须使用中文回答。
+        2. 返回 JSON 格式。
+        3. 字段说明：
+           - reading: 单词的假名读音。
+           - pitchAccent: 单词的声调（如 0, 1, 2 等）。
+           - meaning: 单词的中文意思。
+           - notes: 包含一个简短的日语例句及其对应的中文翻译。
+        4. 严禁在任何字段中包含 "AI生成"、"根据查询" 等类似字样，直接输出内容。`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reading: { type: Type.STRING },
+              pitchAccent: { type: Type.STRING },
+              meaning: { type: Type.STRING },
+              notes: { type: Type.STRING }
+            },
+            required: ['reading', 'meaning']
+          }
+        }
+      });
+
+      const data = JSON.parse(response.text);
+      if (isEditing && editingVocab) {
+        setEditingVocab({
+          ...editingVocab,
+          reading: data.reading || editingVocab.reading,
+          pitchAccent: data.pitchAccent || editingVocab.pitchAccent,
+          meaning: data.meaning || editingVocab.meaning,
+          notes: data.notes || editingVocab.notes
+        });
+      } else {
+        setNewVocab({
+          ...newVocab,
+          reading: data.reading || newVocab.reading,
+          pitchAccent: data.pitchAccent || newVocab.pitchAccent,
+          meaning: data.meaning || newVocab.meaning,
+          notes: data.notes || newVocab.notes
+        });
+      }
+    } catch (error) {
+      console.error("AI Lookup failed:", error);
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
+  const handleGrammarAILookup = async (pattern: string, isEditing = false) => {
+    const patternToLookup = pattern.trim();
+    if (!patternToLookup || isLookingUp) return;
+    
+    setIsLookingUp(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `请为日语语法句型 "${patternToLookup}" 提供详细解释。
+        要求：
+        1. 必须使用中文回答。
+        2. 返回 JSON 格式。
+        3. 字段说明：
+           - meaning: 语法的中文意思。
+           - example: 包含一个日语例句及其对应的中文翻译。
+           - notes: 包含语法的接续方式、使用注意点等中文说明。
+        4. 严禁在任何字段中包含 "AI生成"、"根据查询" 等类似字样，直接输出内容。`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              meaning: { type: Type.STRING },
+              example: { type: Type.STRING },
+              notes: { type: Type.STRING }
+            },
+            required: ['meaning', 'example']
+          }
+        }
+      });
+
+      const data = JSON.parse(response.text);
+      if (isEditing && editingGrammar) {
+        setEditingGrammar({
+          ...editingGrammar,
+          meaning: data.meaning || editingGrammar.meaning,
+          example: data.example || editingGrammar.example,
+          notes: data.notes || editingGrammar.notes
+        });
+      } else {
+        setNewGrammar({
+          ...newGrammar,
+          meaning: data.meaning || newGrammar.meaning,
+          example: data.example || newGrammar.example,
+          notes: data.notes || newGrammar.notes
+        });
+      }
+    } catch (error) {
+      console.error("AI Lookup failed:", error);
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
   
   const [selectedVocab, setSelectedVocab] = useState<Vocabulary | null>(null);
   const [selectedGrammar, setSelectedGrammar] = useState<Grammar | null>(null);
@@ -69,8 +186,10 @@ export function StudyCenter({
       onEditVocab(editingVocab.id, {
         word: editingVocab.word,
         reading: editingVocab.reading,
+        pitchAccent: editingVocab.pitchAccent,
         meaning: editingVocab.meaning,
         notes: editingVocab.notes,
+        sourceUrl: editingVocab.sourceUrl,
       });
       setEditingVocab(null);
     }
@@ -84,6 +203,7 @@ export function StudyCenter({
         meaning: editingGrammar.meaning,
         example: editingGrammar.example,
         notes: editingGrammar.notes,
+        sourceUrl: editingGrammar.sourceUrl,
       });
       setEditingGrammar(null);
     }
@@ -95,12 +215,14 @@ export function StudyCenter({
       onAddVocab({
         word: newVocab.word,
         reading: newVocab.reading,
+        pitchAccent: newVocab.pitchAccent || '',
         meaning: newVocab.meaning,
         notes: newVocab.notes,
         tag: newVocab.tag as VocabTag || 'learning',
+        sourceUrl: newVocab.sourceUrl || '',
       });
       setIsAddingVocab(false);
-      setNewVocab({ word: '', reading: '', meaning: '', notes: '', tag: 'learning' });
+      setNewVocab({ word: '', reading: '', pitchAccent: '', meaning: '', notes: '', tag: 'learning', sourceUrl: '' });
     }
   };
 
@@ -113,9 +235,10 @@ export function StudyCenter({
         example: newGrammar.example || '',
         notes: newGrammar.notes,
         tag: newGrammar.tag as VocabTag || 'learning',
+        sourceUrl: newGrammar.sourceUrl || '',
       });
       setIsAddingGrammar(false);
-      setNewGrammar({ pattern: '', meaning: '', example: '', notes: '', tag: 'learning' });
+      setNewGrammar({ pattern: '', meaning: '', example: '', notes: '', tag: 'learning', sourceUrl: '' });
     }
   };
 
@@ -321,26 +444,49 @@ export function StudyCenter({
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleAddVocabSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleAddVocabSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">单词</label>
-                <input
-                  type="text"
-                  value={newVocab.word}
-                  onChange={e => setNewVocab({...newVocab, word: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newVocab.word}
+                    onChange={e => setNewVocab({...newVocab, word: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleVocabAILookup(newVocab.word || '')}
+                    disabled={!newVocab.word?.trim() || isLookingUp}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-sky-500 hover:bg-sky-100 rounded-lg transition-colors disabled:opacity-50"
+                    title="AI 智能补全"
+                  >
+                    {isLookingUp ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">读音 (假名)</label>
-                <input
-                  type="text"
-                  value={newVocab.reading}
-                  onChange={e => setNewVocab({...newVocab, reading: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">读音 (假名)</label>
+                  <input
+                    type="text"
+                    value={newVocab.reading}
+                    onChange={e => setNewVocab({...newVocab, reading: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">声调</label>
+                  <input
+                    type="text"
+                    value={newVocab.pitchAccent}
+                    onChange={e => setNewVocab({...newVocab, pitchAccent: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                    placeholder="如: 0, 1"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
@@ -358,6 +504,16 @@ export function StudyCenter({
                   onChange={e => setNewVocab({...newVocab, notes: e.target.value})}
                   className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none min-h-[80px]"
                   placeholder="添加一些记忆技巧或例句..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">来源链接</label>
+                <input
+                  type="url"
+                  value={newVocab.sourceUrl}
+                  onChange={e => setNewVocab({...newVocab, sourceUrl: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  placeholder="e.g. YouTube URL"
                 />
               </div>
               <div className="pt-4 flex justify-end gap-2">
@@ -381,16 +537,27 @@ export function StudyCenter({
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleAddGrammarSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleAddGrammarSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">语法句型</label>
-                <input
-                  type="text"
-                  value={newGrammar.pattern}
-                  onChange={e => setNewGrammar({...newGrammar, pattern: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newGrammar.pattern}
+                    onChange={e => setNewGrammar({...newGrammar, pattern: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleGrammarAILookup(newGrammar.pattern || '')}
+                    disabled={!newGrammar.pattern?.trim() || isLookingUp}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-sky-500 hover:bg-sky-100 rounded-lg transition-colors disabled:opacity-50"
+                    title="AI 智能补全"
+                  >
+                    {isLookingUp ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
@@ -418,6 +585,16 @@ export function StudyCenter({
                   placeholder="添加一些使用注意点..."
                 />
               </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">来源链接</label>
+                <input
+                  type="url"
+                  value={newGrammar.sourceUrl}
+                  onChange={e => setNewGrammar({...newGrammar, sourceUrl: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  placeholder="e.g. YouTube URL"
+                />
+              </div>
               <div className="pt-4 flex justify-end gap-2">
                 <button type="button" onClick={() => setIsAddingGrammar(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-xl font-medium">取消</button>
                 <button type="submit" className="px-6 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-bold flex items-center gap-2">
@@ -439,26 +616,49 @@ export function StudyCenter({
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSaveVocab} className="p-6 space-y-4">
+            <form onSubmit={handleSaveVocab} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">单词</label>
-                <input
-                  type="text"
-                  value={editingVocab.word}
-                  onChange={e => setEditingVocab({...editingVocab, word: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={editingVocab.word}
+                    onChange={e => setEditingVocab({...editingVocab, word: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleVocabAILookup(editingVocab.word, true)}
+                    disabled={!editingVocab.word.trim() || isLookingUp}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-sky-500 hover:bg-sky-100 rounded-lg transition-colors disabled:opacity-50"
+                    title="AI 智能补全"
+                  >
+                    {isLookingUp ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">读音 (假名)</label>
-                <input
-                  type="text"
-                  value={editingVocab.reading}
-                  onChange={e => setEditingVocab({...editingVocab, reading: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">读音 (假名)</label>
+                  <input
+                    type="text"
+                    value={editingVocab.reading}
+                    onChange={e => setEditingVocab({...editingVocab, reading: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">声调</label>
+                  <input
+                    type="text"
+                    value={editingVocab.pitchAccent || ''}
+                    onChange={e => setEditingVocab({...editingVocab, pitchAccent: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                    placeholder="如: 0, 1"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
@@ -476,6 +676,16 @@ export function StudyCenter({
                   onChange={e => setEditingVocab({...editingVocab, notes: e.target.value})}
                   className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none min-h-[80px]"
                   placeholder="添加一些记忆技巧或例句..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">来源链接</label>
+                <input
+                  type="url"
+                  value={editingVocab.sourceUrl || ''}
+                  onChange={e => setEditingVocab({...editingVocab, sourceUrl: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  placeholder="e.g. YouTube URL"
                 />
               </div>
               <div className="pt-4 flex justify-end gap-2">
@@ -499,16 +709,27 @@ export function StudyCenter({
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSaveGrammar} className="p-6 space-y-4">
+            <form onSubmit={handleSaveGrammar} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">语法句型</label>
-                <input
-                  type="text"
-                  value={editingGrammar.pattern}
-                  onChange={e => setEditingGrammar({...editingGrammar, pattern: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={editingGrammar.pattern}
+                    onChange={e => setEditingGrammar({...editingGrammar, pattern: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleGrammarAILookup(editingGrammar.pattern, true)}
+                    disabled={!editingGrammar.pattern.trim() || isLookingUp}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-sky-500 hover:bg-sky-100 rounded-lg transition-colors disabled:opacity-50"
+                    title="AI 智能补全"
+                  >
+                    {isLookingUp ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
@@ -525,7 +746,6 @@ export function StudyCenter({
                   value={editingGrammar.example}
                   onChange={e => setEditingGrammar({...editingGrammar, example: e.target.value})}
                   className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none min-h-[80px]"
-                  required
                 />
               </div>
               <div>
@@ -535,6 +755,16 @@ export function StudyCenter({
                   onChange={e => setEditingGrammar({...editingGrammar, notes: e.target.value})}
                   className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none min-h-[80px]"
                   placeholder="添加一些使用注意点..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">来源链接</label>
+                <input
+                  type="url"
+                  value={editingGrammar.sourceUrl || ''}
+                  onChange={e => setEditingGrammar({...editingGrammar, sourceUrl: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  placeholder="e.g. YouTube URL"
                 />
               </div>
               <div className="pt-4 flex justify-end gap-2">

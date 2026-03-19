@@ -10,13 +10,14 @@ import { LoginScreen } from './components/LoginScreen';
 import { SettingsModal } from './components/SettingsModal';
 import { Vocabulary, Grammar, VocabTag, LearningLog } from './types';
 import { format } from 'date-fns';
-import { Trees, Sun, BookOpen, LayoutDashboard, BrainCircuit, Home, LogOut, Settings, Gamepad2 } from 'lucide-react';
+import { Trees, Sun, BookOpen, LayoutDashboard, BrainCircuit, Home, LogOut, Settings, Gamepad2, Bot } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { db } from './firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 import { LearningCalendar } from './components/LearningCalendar';
 import { VocabMatch } from './components/VocabMatch';
+import { AIChatPanel } from './components/AIChatPanel';
 
 export default function App() {
   const { user, profile, logout } = useAuth();
@@ -25,6 +26,7 @@ export default function App() {
   const [logs, setLogs] = useState<LearningLog[]>([]);
   const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'study' | 'quiz' | 'match'>('home');
   const [showSettings, setShowSettings] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [studyFilter, setStudyFilter] = useState<{type: 'vocab' | 'grammar', tag: VocabTag | 'all'}>({type: 'vocab', tag: 'all'});
 
   // Sync data from Firestore when user logs in
@@ -222,6 +224,14 @@ export default function App() {
               <Gamepad2 size={18} /> 词汇配对
             </button>
             
+            <button 
+              onClick={() => setIsAIChatOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors hover:bg-indigo-50 hover:text-indigo-600 text-indigo-500 font-bold"
+              title="AI 助教"
+            >
+              <Bot size={18} />
+              <span className="hidden sm:inline">AI 助教</span>
+            </button>
             <div className="h-6 w-px bg-gray-200 mx-2"></div>
             
             <button 
@@ -331,6 +341,15 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <AIChatPanel 
+        isOpen={isAIChatOpen}
+        onClose={() => setIsAIChatOpen(false)}
+        vocabList={vocabList}
+        grammarList={grammarList}
+        onAddVocab={handleAddVocab}
+        onAddGrammar={handleAddGrammar}
+      />
       
       <footer className="bg-white border-t-4 border-orange-100 py-8 mt-12 text-center text-gray-400 font-medium text-sm">
         <p>划词即可使用 AI 词典查询哦！(๑•̀ㅂ•́)و✧</p>

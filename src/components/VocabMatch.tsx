@@ -291,15 +291,17 @@ function NormalMatch({ vocabList, onUpdateVocabTag, onBack, selectBatch }: any) 
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4">
+          <div className={`grid ${readings.length > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
             <div className="flex flex-col gap-3">
               <div className="text-center text-sm font-bold text-blue-400 mb-2 uppercase tracking-wider">单词</div>
               {words.map(renderCard)}
             </div>
-            <div className="flex flex-col gap-3">
-              <div className="text-center text-sm font-bold text-orange-400 mb-2 uppercase tracking-wider">读音</div>
-              {readings.map(renderCard)}
-            </div>
+            {readings.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <div className="text-center text-sm font-bold text-orange-400 mb-2 uppercase tracking-wider">读音</div>
+                {readings.map(renderCard)}
+              </div>
+            )}
             <div className="flex flex-col gap-3">
               <div className="text-center text-sm font-bold text-emerald-400 mb-2 uppercase tracking-wider">释义</div>
               {meanings.map(renderCard)}

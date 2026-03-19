@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Vocabulary, VocabTag } from '../types';
-import { Plus, CheckCircle2, Clock, XCircle, ExternalLink, Trash2 } from 'lucide-react';
+import { Plus, CheckCircle2, Clock, XCircle, ExternalLink, Trash2, Wand2, Loader2 } from 'lucide-react';
 import { VocabDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
+import { GoogleGenAI, Type } from '@google/genai';
 
 interface VocabKanbanProps {
   vocabList: Vocabulary[];
@@ -29,6 +30,53 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
   const [newSource, setNewSource] = useState('');
   const [selectedVocab, setSelectedVocab] = useState<Vocabulary | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+
+  const handleAILookup = async () => {
+    const wordToLookup = newWord.trim();
+    if (!wordToLookup || isLookingUp) return;
+    
+    setIsLookingUp(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `请为日语单词 "${wordToLookup}" 提供详细解释。
+        要求：
+        1. 必须使用中文回答。
+        2. 返回 JSON 格式。
+        3. 字段说明：
+           - reading: 单词的假名读音。
+           - pitchAccent: 单词的声调（如 0, 1, 2 等）。
+           - meaning: 单词的中文意思。
+           - notes: 包含一个简短的日语例句及其对应的中文翻译。
+        4. 严禁在任何字段中包含 "AI生成"、"根据查询" 等类似字样，直接输出内容。`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reading: { type: Type.STRING },
+              pitchAccent: { type: Type.STRING },
+              meaning: { type: Type.STRING },
+              notes: { type: Type.STRING }
+            },
+            required: ['reading', 'meaning']
+          }
+        }
+      });
+
+      const data = JSON.parse(response.text);
+      if (data.reading) setNewReading(data.reading);
+      if (data.pitchAccent) setNewPitchAccent(data.pitchAccent);
+      if (data.meaning) setNewMeaning(data.meaning);
+      if (data.notes) setNewNotes(data.notes);
+    } catch (error) {
+      console.error("AI Lookup failed:", error);
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,15 +203,26 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
 
       {isAdding && (
         <form onSubmit={handleAdd} className="mb-6 bg-sky-50 p-4 rounded-2xl border-2 border-sky-200 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="text"
-              placeholder="单词 (e.g. 食べる)"
-              value={newWord}
-              onChange={(e) => setNewWord(e.target.value)}
-              className="px-3 py-2 rounded-xl border-2 border-white focus:border-sky-300 outline-none w-full"
-              required
-            />
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="单词 (e.g. 食べる)"
+                value={newWord}
+                onChange={(e) => setNewWord(e.target.value)}
+                className="px-3 py-2 rounded-xl border-2 border-white focus:border-sky-300 outline-none w-full pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={handleAILookup}
+                disabled={!newWord.trim() || isLookingUp}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-sky-500 hover:bg-sky-100 rounded-lg transition-colors disabled:opacity-50"
+                title="AI 智能补全"
+              >
+                {isLookingUp ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+              </button>
+            </div>
             <input
               type="text"
               placeholder="读音 (e.g. たべる)"
