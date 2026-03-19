@@ -3,6 +3,7 @@ import { Vocabulary, Grammar, VocabTag } from '../types';
 import { BookOpen, Library, Search, Edit2, Trash2, Plus, X, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { VocabDetailModal, GrammarDetailModal } from './DetailModals';
+import { ConfirmModal } from './ConfirmModal';
 
 interface StudyCenterProps {
   vocabList: Vocabulary[];
@@ -45,6 +46,9 @@ export function StudyCenter({
   
   const [selectedVocab, setSelectedVocab] = useState<Vocabulary | null>(null);
   const [selectedGrammar, setSelectedGrammar] = useState<Grammar | null>(null);
+
+  const [deleteVocabId, setDeleteVocabId] = useState<string | null>(null);
+  const [deleteGrammarId, setDeleteGrammarId] = useState<string | null>(null);
 
   const filteredVocab = vocabList.filter(v => 
     (filterTag === 'all' || v.tag === filterTag) &&
@@ -214,7 +218,7 @@ export function StudyCenter({
                     <button onClick={() => setEditingVocab(vocab)} className="p-1.5 text-gray-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg">
                       <Edit2 size={16} />
                     </button>
-                    <button onClick={() => onDeleteVocab(vocab.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                    <button onClick={() => setDeleteVocabId(vocab.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -257,7 +261,7 @@ export function StudyCenter({
                     <button onClick={() => setEditingGrammar(grammar)} className="p-1.5 text-gray-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg">
                       <Edit2 size={16} />
                     </button>
-                    <button onClick={() => onDeleteGrammar(grammar.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                    <button onClick={() => setDeleteGrammarId(grammar.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -340,11 +344,10 @@ export function StudyCenter({
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
-                <input
-                  type="text"
+                <textarea
                   value={newVocab.meaning}
                   onChange={e => setNewVocab({...newVocab, meaning: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none resize-none h-20"
                   required
                 />
               </div>
@@ -391,11 +394,10 @@ export function StudyCenter({
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
-                <input
-                  type="text"
+                <textarea
                   value={newGrammar.meaning}
                   onChange={e => setNewGrammar({...newGrammar, meaning: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none resize-none h-20"
                   required
                 />
               </div>
@@ -460,11 +462,10 @@ export function StudyCenter({
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
-                <input
-                  type="text"
+                <textarea
                   value={editingVocab.meaning}
                   onChange={e => setEditingVocab({...editingVocab, meaning: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none resize-none h-20"
                   required
                 />
               </div>
@@ -511,11 +512,10 @@ export function StudyCenter({
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
-                <input
-                  type="text"
+                <textarea
                   value={editingGrammar.meaning}
                   onChange={e => setEditingGrammar({...editingGrammar, meaning: e.target.value})}
-                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none resize-none h-20"
                   required
                 />
               </div>
@@ -547,6 +547,32 @@ export function StudyCenter({
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteVocabId}
+        onCancel={() => setDeleteVocabId(null)}
+        onConfirm={() => {
+          if (deleteVocabId) {
+            onDeleteVocab(deleteVocabId);
+            setDeleteVocabId(null);
+          }
+        }}
+        title="删除词汇"
+        message="确定要删除这个词汇吗？此操作无法撤销。"
+      />
+
+      <ConfirmModal
+        isOpen={!!deleteGrammarId}
+        onCancel={() => setDeleteGrammarId(null)}
+        onConfirm={() => {
+          if (deleteGrammarId) {
+            onDeleteGrammar(deleteGrammarId);
+            setDeleteGrammarId(null);
+          }
+        }}
+        title="删除语法"
+        message="确定要删除这个语法吗？此操作无法撤销。"
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Vocabulary, VocabTag } from '../types';
 import { Plus, CheckCircle2, Clock, XCircle, ExternalLink, Trash2 } from 'lucide-react';
 import { VocabDetailModal } from './DetailModals';
+import { ConfirmModal } from './ConfirmModal';
 
 interface VocabKanbanProps {
   vocabList: Vocabulary[];
@@ -27,6 +28,7 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
   const [newNotes, setNewNotes] = useState('');
   const [newSource, setNewSource] = useState('');
   const [selectedVocab, setSelectedVocab] = useState<Vocabulary | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,7 +111,7 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
                     <option value="review">需复习</option>
                     <option value="mastered">已学会</option>
                   </select>
-                  <button onClick={() => onDeleteVocab(vocab.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors">
+                  <button onClick={() => setDeleteId(vocab.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -230,6 +232,19 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
           onClose={() => setSelectedVocab(null)} 
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteId}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => {
+          if (deleteId) {
+            onDeleteVocab(deleteId);
+            setDeleteId(null);
+          }
+        }}
+        title="删除词汇"
+        message="确定要删除这个词汇吗？此操作无法撤销。"
+      />
     </div>
   );
 }

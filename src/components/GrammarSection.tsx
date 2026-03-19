@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Grammar, VocabTag } from '../types';
 import { Plus, BookOpen, ExternalLink, Trash2, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { GrammarDetailModal } from './DetailModals';
+import { ConfirmModal } from './ConfirmModal';
 
 interface GrammarSectionProps {
   grammarList: Grammar[];
@@ -27,6 +28,7 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
   const [newNotes, setNewNotes] = useState('');
   const [filterTag, setFilterTag] = useState<VocabTag | 'all'>('all');
   const [selectedGrammar, setSelectedGrammar] = useState<Grammar | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,7 +183,7 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
                   <option value="mastered">完全学会</option>
                 </select>
                 <button
-                  onClick={() => onDeleteGrammar(grammar.id)}
+                  onClick={() => setDeleteId(grammar.id)}
                   className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1"
                 >
                   <Trash2 size={18} />
@@ -236,6 +238,19 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
           onClose={() => setSelectedGrammar(null)} 
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteId}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => {
+          if (deleteId) {
+            onDeleteGrammar(deleteId);
+            setDeleteId(null);
+          }
+        }}
+        title="删除语法"
+        message="确定要删除这个语法吗？此操作无法撤销。"
+      />
     </div>
   );
 }

@@ -11,7 +11,7 @@ interface VocabDetailModalProps {
 export function VocabDetailModal({ vocab, onClose }: VocabDetailModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-3xl shadow-xl w-full md:w-fit md:min-w-[600px] max-w-[90vw] overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
           <h2 className="text-xl font-bold text-gray-800">词汇详情</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -83,7 +83,7 @@ interface GrammarDetailModalProps {
 export function GrammarDetailModal({ grammar, onClose }: GrammarDetailModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-3xl shadow-xl w-full md:w-fit md:min-w-[600px] max-w-[90vw] overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
           <h2 className="text-xl font-bold text-gray-800">语法详情</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
