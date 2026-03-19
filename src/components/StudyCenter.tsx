@@ -37,6 +37,11 @@ export function StudyCenter({
   const [editingVocab, setEditingVocab] = useState<Vocabulary | null>(null);
   const [editingGrammar, setEditingGrammar] = useState<Grammar | null>(null);
 
+  const [isAddingVocab, setIsAddingVocab] = useState(false);
+  const [isAddingGrammar, setIsAddingGrammar] = useState(false);
+  const [newVocab, setNewVocab] = useState<Partial<Vocabulary>>({ word: '', reading: '', meaning: '', notes: '', tag: 'learning' });
+  const [newGrammar, setNewGrammar] = useState<Partial<Grammar>>({ pattern: '', meaning: '', example: '', notes: '', tag: 'learning' });
+
   const filteredVocab = vocabList.filter(v => 
     (filterTag === 'all' || v.tag === filterTag) &&
     (v.word.includes(searchQuery) || 
@@ -73,6 +78,36 @@ export function StudyCenter({
         notes: editingGrammar.notes,
       });
       setEditingGrammar(null);
+    }
+  };
+
+  const handleAddVocabSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newVocab.word && newVocab.reading && newVocab.meaning) {
+      onAddVocab({
+        word: newVocab.word,
+        reading: newVocab.reading,
+        meaning: newVocab.meaning,
+        notes: newVocab.notes,
+        tag: newVocab.tag as VocabTag || 'learning',
+      });
+      setIsAddingVocab(false);
+      setNewVocab({ word: '', reading: '', meaning: '', notes: '', tag: 'learning' });
+    }
+  };
+
+  const handleAddGrammarSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newGrammar.pattern && newGrammar.meaning) {
+      onAddGrammar({
+        pattern: newGrammar.pattern,
+        meaning: newGrammar.meaning,
+        example: newGrammar.example || '',
+        notes: newGrammar.notes,
+        tag: newGrammar.tag as VocabTag || 'learning',
+      });
+      setIsAddingGrammar(false);
+      setNewGrammar({ pattern: '', meaning: '', example: '', notes: '', tag: 'learning' });
     }
   };
 
@@ -135,15 +170,24 @@ export function StudyCenter({
           </div>
         </div>
 
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="搜索..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl border-2 border-sky-100 focus:border-sky-300 focus:outline-none transition-colors"
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="搜索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-xl border-2 border-sky-100 focus:border-sky-300 focus:outline-none transition-colors"
+            />
+          </div>
+          <button
+            onClick={() => activeTab === 'vocab' ? setIsAddingVocab(true) : setIsAddingGrammar(true)}
+            className="bg-sky-500 hover:bg-sky-600 text-white p-2 rounded-xl shadow-sm transition-colors flex-shrink-0"
+            title={activeTab === 'vocab' ? "添加词汇" : "添加语法"}
+          >
+            <Plus size={24} />
+          </button>
         </div>
       </div>
 
@@ -236,6 +280,126 @@ export function StudyCenter({
           </div>
         )}
       </div>
+
+      {/* Add Vocab Modal */}
+      {isAddingVocab && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-sky-50 px-6 py-4 flex justify-between items-center border-b border-sky-100">
+              <h3 className="font-bold text-sky-800">添加词汇</h3>
+              <button onClick={() => setIsAddingVocab(false)} className="text-sky-400 hover:text-sky-600">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAddVocabSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">单词</label>
+                <input
+                  type="text"
+                  value={newVocab.word}
+                  onChange={e => setNewVocab({...newVocab, word: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">读音 (假名)</label>
+                <input
+                  type="text"
+                  value={newVocab.reading}
+                  onChange={e => setNewVocab({...newVocab, reading: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
+                <input
+                  type="text"
+                  value={newVocab.meaning}
+                  onChange={e => setNewVocab({...newVocab, meaning: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">个人笔记</label>
+                <textarea
+                  value={newVocab.notes || ''}
+                  onChange={e => setNewVocab({...newVocab, notes: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none min-h-[80px]"
+                  placeholder="添加一些记忆技巧或例句..."
+                />
+              </div>
+              <div className="pt-4 flex justify-end gap-2">
+                <button type="button" onClick={() => setIsAddingVocab(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-xl font-medium">取消</button>
+                <button type="submit" className="px-6 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-bold flex items-center gap-2">
+                  <Plus size={18} /> 添加
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Grammar Modal */}
+      {isAddingGrammar && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-sky-50 px-6 py-4 flex justify-between items-center border-b border-sky-100">
+              <h3 className="font-bold text-sky-800">添加语法</h3>
+              <button onClick={() => setIsAddingGrammar(false)} className="text-sky-400 hover:text-sky-600">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAddGrammarSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">语法句型</label>
+                <input
+                  type="text"
+                  value={newGrammar.pattern}
+                  onChange={e => setNewGrammar({...newGrammar, pattern: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">含义</label>
+                <input
+                  type="text"
+                  value={newGrammar.meaning}
+                  onChange={e => setNewGrammar({...newGrammar, meaning: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">例句</label>
+                <textarea
+                  value={newGrammar.example}
+                  onChange={e => setNewGrammar({...newGrammar, example: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none min-h-[80px]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">个人笔记</label>
+                <textarea
+                  value={newGrammar.notes || ''}
+                  onChange={e => setNewGrammar({...newGrammar, notes: e.target.value})}
+                  className="w-full border-2 border-gray-200 rounded-xl p-2 focus:border-sky-400 focus:outline-none min-h-[80px]"
+                  placeholder="添加一些使用注意点..."
+                />
+              </div>
+              <div className="pt-4 flex justify-end gap-2">
+                <button type="button" onClick={() => setIsAddingGrammar(false)} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-xl font-medium">取消</button>
+                <button type="submit" className="px-6 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-bold flex items-center gap-2">
+                  <Plus size={18} /> 添加
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Edit Vocab Modal */}
       {editingVocab && (

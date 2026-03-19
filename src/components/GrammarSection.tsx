@@ -23,6 +23,7 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
   const [newMeaning, setNewMeaning] = useState('');
   const [newExample, setNewExample] = useState('');
   const [newSource, setNewSource] = useState('');
+  const [newNotes, setNewNotes] = useState('');
   const [filterTag, setFilterTag] = useState<VocabTag | 'all'>('all');
 
   const handleAdd = (e: React.FormEvent) => {
@@ -33,12 +34,14 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
       meaning: newMeaning,
       example: newExample,
       sourceUrl: newSource,
+      notes: newNotes,
       tag: 'learning',
     });
     setNewPattern('');
     setNewMeaning('');
     setNewExample('');
     setNewSource('');
+    setNewNotes('');
     setIsAdding(false);
   };
 
@@ -91,6 +94,12 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
             placeholder="例句 (e.g. ここで写真を撮ってはいけません。)"
             value={newExample}
             onChange={(e) => setNewExample(e.target.value)}
+            className="px-3 py-2 rounded-xl border-2 border-white focus:border-lime-300 outline-none w-full resize-none h-20"
+          />
+          <textarea
+            placeholder="相关笔记 (可选)"
+            value={newNotes}
+            onChange={(e) => setNewNotes(e.target.value)}
             className="px-3 py-2 rounded-xl border-2 border-white focus:border-lime-300 outline-none w-full resize-none h-20"
           />
           <input
@@ -180,6 +189,13 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
               <div className="bg-white p-3 rounded-xl border border-lime-100 text-gray-700 text-sm mb-3 ml-7 shadow-sm">
                 <span className="text-lime-500 font-bold mr-2">例</span>
                 {grammar.example}
+              </div>
+            )}
+
+            {grammar.notes && (
+              <div className="bg-lime-100/50 p-3 rounded-xl border border-lime-200 text-gray-700 text-sm mb-3 ml-7 shadow-sm">
+                <span className="text-lime-600 font-bold mr-2">笔记</span>
+                {grammar.notes}
               </div>
             )}
             

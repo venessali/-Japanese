@@ -45,7 +45,7 @@ export function DictionaryPopup({ apiKey }: DictionaryPopupProps) {
 
     document.addEventListener('mouseup', handleMouseUp);
     return () => document.removeEventListener('mouseup', handleMouseUp);
-  }, []);
+  }, [apiKey]); // Added apiKey to dependency array to prevent stale closure
 
   const fetchExplanation = async (text: string) => {
     setIsLoading(true);
