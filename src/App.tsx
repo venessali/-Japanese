@@ -10,18 +10,22 @@ import { LoginScreen } from './components/LoginScreen';
 import { SettingsModal } from './components/SettingsModal';
 import { Vocabulary, Grammar, VocabTag, LearningLog } from './types';
 import { format } from 'date-fns';
-import { Trees, Sun, BookOpen, LayoutDashboard, BrainCircuit, Home, LogOut, Settings } from 'lucide-react';
+import { Trees, Sun, BookOpen, LayoutDashboard, BrainCircuit, Home, LogOut, Settings, Gamepad2 } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { db } from './firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+
+import { LearningCalendar } from './components/LearningCalendar';
+import { VocabMatch } from './components/VocabMatch';
 
 export default function App() {
   const { user, profile, logout } = useAuth();
   const [vocabList, setVocabList] = useState<Vocabulary[]>([]);
   const [grammarList, setGrammarList] = useState<Grammar[]>([]);
   const [logs, setLogs] = useState<LearningLog[]>([]);
-  const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'study' | 'quiz'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'study' | 'quiz' | 'match'>('home');
   const [showSettings, setShowSettings] = useState(false);
+  const [studyFilter, setStudyFilter] = useState<{type: 'vocab' | 'grammar', tag: VocabTag | 'all'}>({type: 'vocab', tag: 'all'});
 
   // Sync data from Firestore when user logs in
   useEffect(() => {
@@ -107,17 +111,26 @@ export default function App() {
     await deleteDoc(doc(db, 'users', user.uid, 'vocab', id));
   };
 
-  const handleAddGrammar = async (grammar: Omit<Grammar, 'id' | 'createdAt' | 'uid'>) => {
+  const handleAddGrammar = async (grammar: Omit<Grammar, 'id' | 'createdAt' | 'uid' | 'lastReviewed'>) => {
     if (!user) return;
     const id = crypto.randomUUID();
     const newGrammar: Grammar = {
       ...grammar,
       id,
       createdAt: Date.now(),
+      lastReviewed: Date.now(),
       uid: user.uid
     };
     await setDoc(doc(db, 'users', user.uid, 'grammar', id), newGrammar);
     updateDailyLog('grammar');
+  };
+
+  const handleUpdateGrammarTag = async (id: string, tag: VocabTag) => {
+    if (!user) return;
+    const grammar = grammarList.find(g => g.id === id);
+    if (grammar) {
+      await setDoc(doc(db, 'users', user.uid, 'grammar', id), { ...grammar, tag, lastReviewed: Date.now() }, { merge: true });
+    }
   };
 
   const handleDeleteGrammar = async (id: string) => {
@@ -202,6 +215,12 @@ export default function App() {
             >
               <BrainCircuit size={18} /> AI 测验
             </button>
+            <button 
+              onClick={() => setActiveTab('match')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${activeTab === 'match' ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 hover:text-indigo-500'}`}
+            >
+              <Gamepad2 size={18} /> 词汇配对
+            </button>
             
             <div className="h-6 w-px bg-gray-200 mx-2"></div>
             
@@ -235,6 +254,10 @@ export default function App() {
                   onUpdateTag={handleUpdateVocabTag}
                   onDeleteVocab={handleDeleteVocab}
                   onViewAll={() => setActiveTab('study')}
+                  onTagClick={(tag) => {
+                    setStudyFilter({ type: 'vocab', tag });
+                    setActiveTab('study');
+                  }}
                 />
               </div>
               <div className="lg:col-span-5 h-[500px]">
@@ -242,11 +265,25 @@ export default function App() {
                   grammarList={grammarList}
                   onAddGrammar={handleAddGrammar}
                   onDeleteGrammar={handleDeleteGrammar}
+                  onUpdateTag={handleUpdateGrammarTag}
                   onViewAll={() => setActiveTab('study')}
+                  onTagClick={(tag) => {
+                    setStudyFilter({ type: 'grammar', tag });
+                    setActiveTab('study');
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-6 h-[450px]">
+                <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} />
+              </div>
+              <div className="lg:col-span-6 h-[450px]">
+                <VocabMatch 
+                  vocabList={vocabList} 
+                  onUpdateVocabTag={handleUpdateVocabTag} 
                 />
               </div>
               <div className="lg:col-span-7 h-[450px]">
-                <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} />
+                <LearningCalendar logs={logs} />
               </div>
               <div className="lg:col-span-5 h-[450px]">
                 <Dashboard logs={logs} vocabList={vocabList} grammarList={grammarList} compact={true} />
@@ -266,11 +303,13 @@ export default function App() {
             <StudyCenter
               vocabList={vocabList}
               grammarList={grammarList}
+              initialFilter={studyFilter}
               onAddVocab={handleAddVocab}
               onUpdateVocabTag={handleUpdateVocabTag}
               onDeleteVocab={handleDeleteVocab}
               onEditVocab={handleEditVocab}
               onAddGrammar={handleAddGrammar}
+              onUpdateGrammarTag={handleUpdateGrammarTag}
               onDeleteGrammar={handleDeleteGrammar}
               onEditGrammar={handleEditGrammar}
             />
@@ -280,6 +319,15 @@ export default function App() {
         {activeTab === 'quiz' && (
           <div className="h-[calc(100vh-12rem)] max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} />
+          </div>
+        )}
+
+        {activeTab === 'match' && (
+          <div className="h-[calc(100vh-12rem)] max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <VocabMatch 
+              vocabList={vocabList} 
+              onUpdateVocabTag={handleUpdateVocabTag} 
+            />
           </div>
         )}
       </main>

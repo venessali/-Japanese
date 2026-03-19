@@ -6,11 +6,13 @@ import { format } from 'date-fns';
 interface StudyCenterProps {
   vocabList: Vocabulary[];
   grammarList: Grammar[];
+  initialFilter?: { type: 'vocab' | 'grammar', tag: VocabTag | 'all' };
   onAddVocab: (vocab: Omit<Vocabulary, 'id' | 'createdAt' | 'lastReviewed' | 'uid'>) => void;
   onUpdateVocabTag: (id: string, tag: VocabTag) => void;
   onDeleteVocab: (id: string) => void;
   onEditVocab: (id: string, updates: Partial<Vocabulary>) => void;
-  onAddGrammar: (grammar: Omit<Grammar, 'id' | 'createdAt' | 'uid'>) => void;
+  onAddGrammar: (grammar: Omit<Grammar, 'id' | 'createdAt' | 'lastReviewed' | 'uid'>) => void;
+  onUpdateGrammarTag: (id: string, tag: VocabTag) => void;
   onDeleteGrammar: (id: string) => void;
   onEditGrammar: (id: string, updates: Partial<Grammar>) => void;
 }
@@ -18,29 +20,34 @@ interface StudyCenterProps {
 export function StudyCenter({
   vocabList,
   grammarList,
+  initialFilter,
   onAddVocab,
   onUpdateVocabTag,
   onDeleteVocab,
   onEditVocab,
   onAddGrammar,
+  onUpdateGrammarTag,
   onDeleteGrammar,
   onEditGrammar
 }: StudyCenterProps) {
-  const [activeTab, setActiveTab] = useState<'vocab' | 'grammar'>('vocab');
+  const [activeTab, setActiveTab] = useState<'vocab' | 'grammar'>(initialFilter?.type || 'vocab');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterTag, setFilterTag] = useState<VocabTag | 'all'>(initialFilter?.tag || 'all');
   
   const [editingVocab, setEditingVocab] = useState<Vocabulary | null>(null);
   const [editingGrammar, setEditingGrammar] = useState<Grammar | null>(null);
 
   const filteredVocab = vocabList.filter(v => 
-    v.word.includes(searchQuery) || 
+    (filterTag === 'all' || v.tag === filterTag) &&
+    (v.word.includes(searchQuery) || 
     v.reading.includes(searchQuery) || 
-    v.meaning.includes(searchQuery)
+    v.meaning.includes(searchQuery))
   );
 
   const filteredGrammar = grammarList.filter(g => 
-    g.pattern.includes(searchQuery) || 
-    g.meaning.includes(searchQuery)
+    (filterTag === 'all' || g.tag === filterTag) &&
+    (g.pattern.includes(searchQuery) || 
+    g.meaning.includes(searchQuery))
   );
 
   const handleSaveVocab = (e: React.FormEvent) => {
@@ -73,23 +80,59 @@ export function StudyCenter({
     <div className="bg-white rounded-3xl shadow-sm border-4 border-sky-100 h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-sky-50 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-b-2 border-sky-100">
-        <div className="flex gap-2 bg-white p-1 rounded-xl shadow-sm border border-sky-100">
-          <button
-            onClick={() => setActiveTab('vocab')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-colors ${
-              activeTab === 'vocab' ? 'bg-sky-100 text-sky-700' : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <BookOpen size={18} /> 词汇库 ({vocabList.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('grammar')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-colors ${
-              activeTab === 'grammar' ? 'bg-sky-100 text-sky-700' : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <Library size={18} /> 语法库 ({grammarList.length})
-          </button>
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <div className="flex gap-2 bg-white p-1 rounded-xl shadow-sm border border-sky-100">
+            <button
+              onClick={() => { setActiveTab('vocab'); setFilterTag('all'); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-colors ${
+                activeTab === 'vocab' ? 'bg-sky-100 text-sky-700' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <BookOpen size={18} /> 词汇库 ({vocabList.length})
+            </button>
+            <button
+              onClick={() => { setActiveTab('grammar'); setFilterTag('all'); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-colors ${
+                activeTab === 'grammar' ? 'bg-sky-100 text-sky-700' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <Library size={18} /> 语法库 ({grammarList.length})
+            </button>
+          </div>
+          <div className="flex gap-2 bg-white p-1 rounded-xl shadow-sm border border-sky-100 overflow-x-auto">
+            <button
+              onClick={() => setFilterTag('all')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
+                filterTag === 'all' ? 'bg-sky-500 text-white' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              全部
+            </button>
+            <button
+              onClick={() => setFilterTag('learning')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
+                filterTag === 'learning' ? 'bg-rose-500 text-white' : 'text-rose-500 hover:bg-rose-50'
+              }`}
+            >
+              完全没学会
+            </button>
+            <button
+              onClick={() => setFilterTag('review')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
+                filterTag === 'review' ? 'bg-amber-500 text-white' : 'text-amber-500 hover:bg-amber-50'
+              }`}
+            >
+              需要复习
+            </button>
+            <button
+              onClick={() => setFilterTag('mastered')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
+                filterTag === 'mastered' ? 'bg-emerald-500 text-white' : 'text-emerald-500 hover:bg-emerald-50'
+              }`}
+            >
+              完全学会
+            </button>
+          </div>
         </div>
 
         <div className="relative w-full sm:w-64">
@@ -168,11 +211,21 @@ export function StudyCenter({
                   {grammar.example}
                 </div>
                 {grammar.notes && (
-                  <div className="bg-amber-50 p-3 rounded-xl text-sm text-amber-800 border border-amber-100">
+                  <div className="bg-amber-50 p-3 rounded-xl text-sm text-amber-800 border border-amber-100 mb-3">
                     <span className="font-bold block mb-1">笔记：</span>
                     {grammar.notes}
                   </div>
                 )}
+                <div className="flex justify-between items-center text-xs text-gray-400 mt-auto pt-2 border-t border-gray-50">
+                  <span className={`px-2 py-1 rounded-md font-bold ${
+                    grammar.tag === 'mastered' ? 'bg-emerald-100 text-emerald-700' :
+                    grammar.tag === 'learning' ? 'bg-amber-100 text-amber-700' :
+                    'bg-rose-100 text-rose-700'
+                  }`}>
+                    {grammar.tag === 'mastered' ? '已掌握' : grammar.tag === 'learning' ? '学习中' : '需复习'}
+                  </span>
+                  <span>添加于 {format(grammar.createdAt, 'MM-dd')}</span>
+                </div>
               </div>
             ))}
             {filteredGrammar.length === 0 && (

@@ -19,8 +19,10 @@ export interface Grammar {
   pattern: string;
   meaning: string;
   example: string;
+  tag: VocabTag;
   sourceUrl?: string;
   createdAt: number;
+  lastReviewed: number;
   uid?: string;
   notes?: string;
 }
@@ -30,4 +32,5 @@ export interface LearningLog {
   vocabLearned: number;
   grammarLearned: number;
   quizzesTaken: number;
+  uid?: string;
 }

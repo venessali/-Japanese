@@ -8,6 +8,7 @@ interface VocabKanbanProps {
   onUpdateTag: (id: string, tag: VocabTag) => void;
   onDeleteVocab: (id: string) => void;
   onViewAll?: () => void;
+  onTagClick?: (tag: VocabTag) => void;
 }
 
 const TAG_CONFIG = {
@@ -16,7 +17,7 @@ const TAG_CONFIG = {
   learning: { label: '完全没学会', icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' },
 };
 
-export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab, onViewAll }: VocabKanbanProps) {
+export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab, onViewAll, onTagClick }: VocabKanbanProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [newReading, setNewReading] = useState('');
@@ -50,7 +51,10 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
 
     return (
       <div className={`flex-1 min-w-[160px] rounded-3xl p-3 border-4 ${config.border} ${config.bg} flex flex-col h-full`}>
-        <div className="flex items-center gap-2 mb-4 px-2">
+        <div 
+          className={`flex items-center gap-2 mb-4 px-2 ${onTagClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+          onClick={() => onTagClick && onTagClick(tag)}
+        >
           <Icon className={config.color} size={20} />
           <h3 className={`font-bold text-base ${config.color}`}>{config.label}</h3>
           <span className="ml-auto bg-white px-2 py-0.5 rounded-full text-xs font-bold text-gray-500 shadow-sm">
