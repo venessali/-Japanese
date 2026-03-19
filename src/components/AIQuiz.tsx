@@ -157,11 +157,11 @@ export function AIQuiz({ vocabList, grammarList, apiKey }: AIQuizProps) {
           <textarea
             value={customPrompt}
             onChange={(e) => setCustomPrompt(e.target.value)}
-            placeholder="例如：请出5道N4难度的选择题，侧重于助词的用法，并用中文解释答案..."
+            placeholder="例如：请出5道N4难度的选择题，侧重于助词的用法..."
             className="w-full bg-white border-2 border-amber-200 rounded-xl p-3 text-sm text-gray-700 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all resize-none h-24"
           />
           <p className="text-xs text-amber-500 mt-2">
-            * 默认会以活泼可爱的语气，根据你最近学习的词汇和语法出题。你可以在这里添加额外的要求。
+            * 默认会以活泼可爱的语气，使用简体中文，根据你最近学习的词汇和语法出题。你可以在这里添加额外的要求。
           </p>
         </div>
       )}
