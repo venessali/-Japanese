@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Vocabulary, Grammar, VocabTag } from '../types';
 import { BookOpen, Library, Search, Edit2, Trash2, Plus, X, Save } from 'lucide-react';
 import { format } from 'date-fns';
+import { VocabDetailModal, GrammarDetailModal } from './DetailModals';
 
 interface StudyCenterProps {
   vocabList: Vocabulary[];
@@ -41,6 +42,9 @@ export function StudyCenter({
   const [isAddingGrammar, setIsAddingGrammar] = useState(false);
   const [newVocab, setNewVocab] = useState<Partial<Vocabulary>>({ word: '', reading: '', meaning: '', notes: '', tag: 'learning' });
   const [newGrammar, setNewGrammar] = useState<Partial<Grammar>>({ pattern: '', meaning: '', example: '', notes: '', tag: 'learning' });
+  
+  const [selectedVocab, setSelectedVocab] = useState<Vocabulary | null>(null);
+  const [selectedGrammar, setSelectedGrammar] = useState<Grammar | null>(null);
 
   const filteredVocab = vocabList.filter(v => 
     (filterTag === 'all' || v.tag === filterTag) &&
@@ -196,13 +200,17 @@ export function StudyCenter({
         {activeTab === 'vocab' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredVocab.map(vocab => (
-              <div key={vocab.id} className="bg-white p-4 rounded-2xl border-2 border-gray-100 shadow-sm hover:border-sky-200 transition-colors group">
+              <div 
+                key={vocab.id} 
+                className="bg-white p-4 rounded-2xl border-2 border-gray-100 shadow-sm hover:border-sky-200 transition-colors group cursor-pointer"
+                onClick={() => setSelectedVocab(vocab)}
+              >
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h3 className="text-xl font-black text-gray-800">{vocab.word}</h3>
                     <p className="text-sm text-sky-600 font-medium">{vocab.reading}</p>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                     <button onClick={() => setEditingVocab(vocab)} className="p-1.5 text-gray-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg">
                       <Edit2 size={16} />
                     </button>
@@ -211,9 +219,9 @@ export function StudyCenter({
                     </button>
                   </div>
                 </div>
-                <p className="text-gray-600 mb-3">{vocab.meaning}</p>
+                <p className="text-gray-600 mb-3 whitespace-pre-wrap">{vocab.meaning}</p>
                 {vocab.notes && (
-                  <div className="bg-amber-50 p-2 rounded-lg text-sm text-amber-800 mb-3 border border-amber-100">
+                  <div className="bg-amber-50 p-2 rounded-lg text-sm text-amber-800 mb-3 border border-amber-100 whitespace-pre-wrap">
                     <span className="font-bold">笔记：</span>{vocab.notes}
                   </div>
                 )}
@@ -238,10 +246,14 @@ export function StudyCenter({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredGrammar.map(grammar => (
-              <div key={grammar.id} className="bg-white p-5 rounded-2xl border-2 border-gray-100 shadow-sm hover:border-sky-200 transition-colors group">
+              <div 
+                key={grammar.id} 
+                className="bg-white p-5 rounded-2xl border-2 border-gray-100 shadow-sm hover:border-sky-200 transition-colors group cursor-pointer"
+                onClick={() => setSelectedGrammar(grammar)}
+              >
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="text-lg font-black text-sky-700">{grammar.pattern}</h3>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                     <button onClick={() => setEditingGrammar(grammar)} className="p-1.5 text-gray-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg">
                       <Edit2 size={16} />
                     </button>
@@ -250,12 +262,12 @@ export function StudyCenter({
                     </button>
                   </div>
                 </div>
-                <p className="text-gray-700 font-medium mb-3">{grammar.meaning}</p>
-                <div className="bg-gray-50 p-3 rounded-xl text-gray-600 text-sm mb-3">
+                <p className="text-gray-700 font-medium mb-3 whitespace-pre-wrap">{grammar.meaning}</p>
+                <div className="bg-gray-50 p-3 rounded-xl text-gray-600 text-sm mb-3 whitespace-pre-wrap">
                   {grammar.example}
                 </div>
                 {grammar.notes && (
-                  <div className="bg-amber-50 p-3 rounded-xl text-sm text-amber-800 border border-amber-100 mb-3">
+                  <div className="bg-amber-50 p-3 rounded-xl text-sm text-amber-800 border border-amber-100 mb-3 whitespace-pre-wrap">
                     <span className="font-bold block mb-1">笔记：</span>
                     {grammar.notes}
                   </div>
@@ -280,6 +292,20 @@ export function StudyCenter({
           </div>
         )}
       </div>
+
+      {selectedVocab && (
+        <VocabDetailModal 
+          vocab={selectedVocab} 
+          onClose={() => setSelectedVocab(null)} 
+        />
+      )}
+
+      {selectedGrammar && (
+        <GrammarDetailModal 
+          grammar={selectedGrammar} 
+          onClose={() => setSelectedGrammar(null)} 
+        />
+      )}
 
       {/* Add Vocab Modal */}
       {isAddingVocab && (

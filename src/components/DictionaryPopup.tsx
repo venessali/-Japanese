@@ -14,7 +14,45 @@ export function DictionaryPopup({ apiKey }: DictionaryPopupProps) {
   const [explanation, setExplanation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const apiKeyRef = React.useRef(apiKey);
   useEffect(() => {
+    apiKeyRef.current = apiKey;
+  }, [apiKey]);
+
+  useEffect(() => {
+    const fetchExplanation = async (text: string) => {
+      setIsLoading(true);
+      setExplanation('');
+      try {
+        const response = await fetch('/api/dictionary', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text, apiKey: apiKeyRef.current }),
+        });
+
+        if (!response.ok) {
+          let errorMessage = 'Failed to fetch explanation';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            errorMessage = `Server error (${response.status}): ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        setExplanation(data.text || '无法获取解释。');
+      } catch (err: any) {
+        console.error(err);
+        setExplanation(err.message || '查询失败，请检查网络或 API Key。');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     const handleMouseUp = (e: MouseEvent) => {
       // Don't trigger if clicking inside the popup
       const popupElement = document.getElementById('dictionary-popup');
@@ -45,40 +83,7 @@ export function DictionaryPopup({ apiKey }: DictionaryPopupProps) {
 
     document.addEventListener('mouseup', handleMouseUp);
     return () => document.removeEventListener('mouseup', handleMouseUp);
-  }, [apiKey]); // Added apiKey to dependency array to prevent stale closure
-
-  const fetchExplanation = async (text: string) => {
-    setIsLoading(true);
-    setExplanation('');
-    try {
-      const response = await fetch('/api/dictionary', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text, apiKey }),
-      });
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to fetch explanation';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          errorMessage = `Server error (${response.status}): ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-      setExplanation(data.text || '无法获取解释。');
-    } catch (err: any) {
-      console.error(err);
-      setExplanation(err.message || '查询失败，请检查网络或 API Key。');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, []);
 
   return (
     <AnimatePresence>

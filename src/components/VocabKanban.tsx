@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Vocabulary, VocabTag } from '../types';
 import { Plus, CheckCircle2, Clock, XCircle, ExternalLink, Trash2 } from 'lucide-react';
+import { VocabDetailModal } from './DetailModals';
 
 interface VocabKanbanProps {
   vocabList: Vocabulary[];
@@ -23,7 +24,9 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
   const [newReading, setNewReading] = useState('');
   const [newPitchAccent, setNewPitchAccent] = useState('');
   const [newMeaning, setNewMeaning] = useState('');
+  const [newNotes, setNewNotes] = useState('');
   const [newSource, setNewSource] = useState('');
+  const [selectedVocab, setSelectedVocab] = useState<Vocabulary | null>(null);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,12 +38,14 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
       meaning: newMeaning,
       tag: 'learning',
       sourceUrl: newSource,
+      notes: newNotes,
     });
     setNewWord('');
     setNewReading('');
     setNewPitchAccent('');
     setNewMeaning('');
     setNewSource('');
+    setNewNotes('');
     setIsAdding(false);
   };
 
@@ -64,7 +69,11 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
         
         <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
           {items.map((vocab) => (
-            <div key={vocab.id} className="bg-white p-3 rounded-2xl shadow-sm border-2 border-transparent hover:border-gray-100 transition-all group relative flex flex-col">
+            <div 
+              key={vocab.id} 
+              className="bg-white p-3 rounded-2xl shadow-sm border-2 border-transparent hover:border-gray-100 transition-all group relative flex flex-col cursor-pointer"
+              onClick={() => setSelectedVocab(vocab)}
+            >
               <div className="mb-1">
                 <div className="text-xs text-gray-400 font-medium mb-1 flex items-center gap-1 flex-wrap">
                   <span>{vocab.reading}</span>
@@ -76,9 +85,9 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
                 </div>
                 <div className="text-xl font-bold text-gray-800 break-words leading-tight">{vocab.word}</div>
               </div>
-              <div className="text-gray-600 text-sm mb-2">{vocab.meaning}</div>
+              <div className="text-gray-600 text-sm mb-2 whitespace-pre-wrap">{vocab.meaning}</div>
               
-              <div className="mt-auto pt-2 border-t border-gray-50 flex items-center justify-between">
+              <div className="mt-auto pt-2 border-t border-gray-50 flex items-center justify-between" onClick={e => e.stopPropagation()}>
                 {vocab.sourceUrl ? (
                   <a
                     href={vocab.sourceUrl}
@@ -178,6 +187,12 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
               required
             />
           </div>
+          <textarea
+            placeholder="相关笔记 (可选)"
+            value={newNotes}
+            onChange={(e) => setNewNotes(e.target.value)}
+            className="px-3 py-2 rounded-xl border-2 border-white focus:border-sky-300 outline-none w-full resize-none h-20"
+          />
           <input
             type="url"
             placeholder="来源链接 (可选, e.g. YouTube URL)"
@@ -208,6 +223,13 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
         {renderColumn('review')}
         {renderColumn('mastered')}
       </div>
+
+      {selectedVocab && (
+        <VocabDetailModal 
+          vocab={selectedVocab} 
+          onClose={() => setSelectedVocab(null)} 
+        />
+      )}
     </div>
   );
 }

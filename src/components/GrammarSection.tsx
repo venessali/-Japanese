@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Grammar, VocabTag } from '../types';
 import { Plus, BookOpen, ExternalLink, Trash2, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { GrammarDetailModal } from './DetailModals';
 
 interface GrammarSectionProps {
   grammarList: Grammar[];
@@ -25,6 +26,7 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
   const [newSource, setNewSource] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [filterTag, setFilterTag] = useState<VocabTag | 'all'>('all');
+  const [selectedGrammar, setSelectedGrammar] = useState<Grammar | null>(null);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,13 +160,17 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
 
       <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar min-h-0">
         {filteredList.map((grammar) => (
-          <div key={grammar.id} className="bg-lime-50/50 p-5 rounded-2xl border-2 border-lime-100 hover:border-lime-300 transition-colors group relative">
+          <div 
+            key={grammar.id} 
+            className="bg-lime-50/50 p-5 rounded-2xl border-2 border-lime-100 hover:border-lime-300 transition-colors group relative cursor-pointer"
+            onClick={() => setSelectedGrammar(grammar)}
+          >
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-2">
                 <BookOpen className="text-lime-500" size={20} />
                 <h3 className="text-xl font-bold text-gray-800">{grammar.pattern}</h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                 <select
                   value={grammar.tag || 'learning'}
                   onChange={(e) => onUpdateTag(grammar.id, e.target.value as VocabTag)}
@@ -183,24 +189,24 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
               </div>
             </div>
             
-            <div className="text-gray-600 font-medium mb-3 pl-7">{grammar.meaning}</div>
+            <div className="text-gray-600 font-medium mb-3 pl-7 whitespace-pre-wrap">{grammar.meaning}</div>
             
             {grammar.example && (
-              <div className="bg-white p-3 rounded-xl border border-lime-100 text-gray-700 text-sm mb-3 ml-7 shadow-sm">
+              <div className="bg-white p-3 rounded-xl border border-lime-100 text-gray-700 text-sm mb-3 ml-7 shadow-sm whitespace-pre-wrap">
                 <span className="text-lime-500 font-bold mr-2">例</span>
                 {grammar.example}
               </div>
             )}
 
             {grammar.notes && (
-              <div className="bg-lime-100/50 p-3 rounded-xl border border-lime-200 text-gray-700 text-sm mb-3 ml-7 shadow-sm">
+              <div className="bg-lime-100/50 p-3 rounded-xl border border-lime-200 text-gray-700 text-sm mb-3 ml-7 shadow-sm whitespace-pre-wrap">
                 <span className="text-lime-600 font-bold mr-2">笔记</span>
                 {grammar.notes}
               </div>
             )}
             
             {grammar.sourceUrl && (
-              <div className="ml-7">
+              <div className="ml-7" onClick={e => e.stopPropagation()}>
                 <a
                   href={grammar.sourceUrl}
                   target="_blank"
@@ -223,6 +229,13 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
           </div>
         )}
       </div>
+
+      {selectedGrammar && (
+        <GrammarDetailModal 
+          grammar={selectedGrammar} 
+          onClose={() => setSelectedGrammar(null)} 
+        />
+      )}
     </div>
   );
 }
