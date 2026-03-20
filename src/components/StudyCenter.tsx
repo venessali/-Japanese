@@ -4,6 +4,7 @@ import { BookOpen, Library, Search, Edit2, Trash2, Plus, X, Save, Wand2, Loader2
 import { format } from 'date-fns';
 import { VocabDetailModal, GrammarDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
+import { GoogleGenAI, Type } from '@google/genai';
 
 interface StudyCenterProps {
   vocabList: Vocabulary[];
@@ -47,36 +48,31 @@ export function StudyCenter({
   const [isLookingUp, setIsLookingUp] = useState(false);
 
   const handleVocabAILookup = async (word: string, isEditing = false) => {
-    const wordToLookup = word.trim();
-    if (!wordToLookup || isLookingUp) return;
+    if (!word.trim() || isLookingUp) return;
     
     setIsLookingUp(true);
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: `请为日语单词 "${wordToLookup}" 提供详细解释。
-          要求：
-          1. 必须使用中文回答。
-          2. 返回 JSON 格式。
-          3. 字段说明：
-             - reading: 单词的假名读音。
-             - pitchAccent: 单词的声调（如 0, 1, 2 等）。
-             - meaning: 单词的中文意思。
-             - notes: 包含一个简短的日语例句及其对应的中文翻译。
-          4. 严禁在任何字段中包含 "AI生成"、"根据查询" 等类似字样，直接输出内容。` }] }],
-          responseMimeType: 'application/json'
-        })
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Please provide details for the Japanese word: "${word}". 
+        Return the response in JSON format with fields: reading, pitchAccent, meaning, and notes (including a short example sentence).`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reading: { type: Type.STRING },
+              pitchAccent: { type: Type.STRING },
+              meaning: { type: Type.STRING },
+              notes: { type: Type.STRING }
+            },
+            required: ['reading', 'meaning']
+          }
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'AI Lookup failed');
-      }
-
-      const result = await response.json();
-      const data = JSON.parse(result.text);
+      const data = JSON.parse(response.text);
       if (isEditing && editingVocab) {
         setEditingVocab({
           ...editingVocab,
@@ -102,35 +98,30 @@ export function StudyCenter({
   };
 
   const handleGrammarAILookup = async (pattern: string, isEditing = false) => {
-    const patternToLookup = pattern.trim();
-    if (!patternToLookup || isLookingUp) return;
+    if (!pattern.trim() || isLookingUp) return;
     
     setIsLookingUp(true);
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: `请为日语语法句型 "${patternToLookup}" 提供详细解释。
-          要求：
-          1. 必须使用中文回答。
-          2. 返回 JSON 格式。
-          3. 字段说明：
-             - meaning: 语法的中文意思。
-             - example: 包含一个日语例句及其对应的中文翻译。
-             - notes: 包含语法的接续方式、使用注意点等中文说明。
-          4. 严禁在任何字段中包含 "AI生成"、"根据查询" 等类似字样，直接输出内容。` }] }],
-          responseMimeType: 'application/json'
-        })
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Please provide details for the Japanese grammar pattern: "${pattern}". 
+        Return the response in JSON format with fields: meaning, example, and notes (additional usage tips).`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              meaning: { type: Type.STRING },
+              example: { type: Type.STRING },
+              notes: { type: Type.STRING }
+            },
+            required: ['meaning', 'example']
+          }
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'AI Lookup failed');
-      }
-
-      const result = await response.json();
-      const data = JSON.parse(result.text);
+      const data = JSON.parse(response.text);
       if (isEditing && editingGrammar) {
         setEditingGrammar({
           ...editingGrammar,

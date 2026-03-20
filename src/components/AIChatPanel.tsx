@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, MessageSquare, Send, GripHorizontal, Plus, Edit2, Check, Bot } from 'lucide-react';
 import { Vocabulary, Grammar } from '../types';
+import { GoogleGenAI, Type } from '@google/genai';
 import Markdown from 'react-markdown';
 
 interface AIChatPanelProps {
@@ -43,7 +44,71 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<any>(null);
 
-  // Scroll to bottom
+  // Initialize Gemini Chat
+  useEffect(() => {
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      chatRef.current = ai.chats.create({
+        model: 'gemini-3-flash-preview',
+        config: {
+          systemInstruction: `You are a helpful Japanese learning assistant named ${aiName}.
+The user currently has ${vocabList.length} vocabulary words (${vocabList.filter(v => v.tag === 'mastered').length} mastered) and ${grammarList.length} grammar points (${grammarList.filter(g => g.tag === 'mastered').length} mastered).
+Adjust the complexity of your explanations based on their level.
+If the user asks about a specific word or grammar point, explain it clearly.
+You can suggest related vocabulary or grammar points that the user might find useful.
+Always return your response in the specified JSON format.
+The 'reply' field should contain your main message in Markdown.
+The 'suggestedVocab' and 'suggestedGrammar' fields should contain any new items you want to suggest adding to their study list.`,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reply: { type: Type.STRING, description: 'The AI reply to the user in Markdown format.' },
+              suggestedVocab: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    word: { type: Type.STRING },
+                    reading: { type: Type.STRING },
+                    meaning: { type: Type.STRING },
+                    notes: { type: Type.STRING }
+                  }
+                }
+              },
+              suggestedGrammar: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    pattern: { type: Type.STRING },
+                    meaning: { type: Type.STRING },
+                    example: { type: Type.STRING },
+                    notes: { type: Type.STRING }
+                  }
+                }
+              }
+            },
+            required: ['reply']
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Failed to initialize Gemini API:", error);
+    }
+  }, [aiName, vocabList.length, grammarList.length]);
+
+  // Update welcome message when name changes
+  useEffect(() => {
+    setMessages(prev => {
+      const newMessages = [...prev];
+      if (newMessages[0] && newMessages[0].id === 'welcome') {
+        newMessages[0].text = `你好！我是你的专属日语学习助手 **${aiName}**。你可以随时向我提问，或者开启“拖拽模式”将不懂的词句拖进来问我哦！`;
+      }
+      return newMessages;
+    });
+  }, [aiName]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -80,9 +145,8 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
-  // Send message to server-side Gemini API
   const handleSend = async () => {
-    if ((!input.trim() && tags.length === 0) || isLoading) return;
+    if ((!input.trim() && tags.length === 0) || isLoading || !chatRef.current) return;
 
     const userMessageText = input.trim();
     const currentTags = [...tags];
@@ -94,8 +158,7 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
       tags: currentTags.length > 0 ? currentTags : undefined
     };
 
-    const updatedMessages = [...messages, newUserMessage];
-    setMessages(updatedMessages);
+    setMessages(prev => [...prev, newUserMessage]);
     setInput('');
     setTags([]);
     setIsLoading(true);
@@ -106,36 +169,8 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
         prompt = `关于以下内容：[${currentTags.join(', ')}]\n${userMessageText}`;
       }
 
-      // Map history to Gemini format
-      const contents = updatedMessages.map(msg => ({
-        role: msg.role,
-        parts: [{ text: msg.id === updatedMessages[updatedMessages.length - 1].id ? prompt : msg.text }]
-      }));
-
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: `You are a helpful Japanese learning assistant named ${aiName}.
-The user currently has ${vocabList.length} vocabulary words (${vocabList.filter(v => v.tag === 'mastered').length} mastered) and ${grammarList.length} grammar points (${grammarList.filter(g => g.tag === 'mastered').length} mastered).
-Adjust the complexity of your explanations based on their level.
-If the user asks about a specific word or grammar point, explain it clearly.
-You can suggest related vocabulary or grammar points that the user might find useful.
-Always return your response in the specified JSON format.
-The 'reply' field should contain your main message in Markdown.
-The 'suggestedVocab' and 'suggestedGrammar' fields should contain any new items you want to suggest adding to their study list.`,
-          responseMimeType: 'application/json'
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Chat failed');
-      }
-
-      const result = await response.json();
-      const responseText = result.text;
+      const response = await chatRef.current.sendMessage({ message: prompt });
+      const responseText = response.text;
       
       if (responseText) {
         try {

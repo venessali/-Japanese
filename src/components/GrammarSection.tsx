@@ -3,6 +3,7 @@ import { Grammar, VocabTag } from '../types';
 import { Plus, BookOpen, ExternalLink, Trash2, CheckCircle2, Clock, XCircle, Wand2, Loader2 } from 'lucide-react';
 import { GrammarDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
+import { GoogleGenAI, Type } from '@google/genai';
 
 interface GrammarSectionProps {
   grammarList: Grammar[];
@@ -32,35 +33,30 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
   const [isLookingUp, setIsLookingUp] = useState(false);
 
   const handleAILookup = async () => {
-    const patternToLookup = newPattern.trim();
-    if (!patternToLookup || isLookingUp) return;
+    if (!newPattern.trim() || isLookingUp) return;
     
     setIsLookingUp(true);
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: `请为日语语法句型 "${patternToLookup}" 提供详细解释。
-          要求：
-          1. 必须使用中文回答。
-          2. 返回 JSON 格式。
-          3. 字段说明：
-             - meaning: 语法的中文意思。
-             - example: 包含一个日语例句及其对应的中文翻译。
-             - notes: 包含语法的接续方式、使用注意点等中文说明。
-          4. 严禁在任何字段中包含 "AI生成"、"根据查询" 等类似字样，直接输出内容。` }] }],
-          responseMimeType: 'application/json'
-        })
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Please provide details for the Japanese grammar pattern: "${newPattern}". 
+        Return the response in JSON format with fields: meaning, example, and notes (additional usage tips).`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              meaning: { type: Type.STRING },
+              example: { type: Type.STRING },
+              notes: { type: Type.STRING }
+            },
+            required: ['meaning', 'example']
+          }
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'AI Lookup failed');
-      }
-
-      const result = await response.json();
-      const data = JSON.parse(result.text);
+      const data = JSON.parse(response.text);
       if (data.meaning) setNewMeaning(data.meaning);
       if (data.example) setNewExample(data.example);
       if (data.notes) setNewNotes(data.notes);

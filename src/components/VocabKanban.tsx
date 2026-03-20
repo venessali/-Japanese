@@ -3,6 +3,7 @@ import { Vocabulary, VocabTag } from '../types';
 import { Plus, CheckCircle2, Clock, XCircle, ExternalLink, Trash2, Wand2, Loader2 } from 'lucide-react';
 import { VocabDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
+import { GoogleGenAI, Type } from '@google/genai';
 
 interface VocabKanbanProps {
   vocabList: Vocabulary[];
@@ -32,36 +33,31 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
   const [isLookingUp, setIsLookingUp] = useState(false);
 
   const handleAILookup = async () => {
-    const wordToLookup = newWord.trim();
-    if (!wordToLookup || isLookingUp) return;
+    if (!newWord.trim() || isLookingUp) return;
     
     setIsLookingUp(true);
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: `请为日语单词 "${wordToLookup}" 提供详细解释。
-          要求：
-          1. 必须使用中文回答。
-          2. 返回 JSON 格式。
-          3. 字段说明：
-             - reading: 单词的假名读音。
-             - pitchAccent: 单词的声调（如 0, 1, 2 等）。
-             - meaning: 单词的中文意思。
-             - notes: 包含一个简短的日语例句及其对应的中文翻译。
-          4. 严禁在任何字段中包含 "AI生成"、"根据查询" 等类似字样，直接输出内容。` }] }],
-          responseMimeType: 'application/json'
-        })
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Please provide details for the Japanese word: "${newWord}". 
+        Return the response in JSON format with fields: reading, pitchAccent, meaning, and notes (including a short example sentence).`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reading: { type: Type.STRING },
+              pitchAccent: { type: Type.STRING },
+              meaning: { type: Type.STRING },
+              notes: { type: Type.STRING }
+            },
+            required: ['reading', 'meaning']
+          }
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'AI Lookup failed');
-      }
-
-      const result = await response.json();
-      const data = JSON.parse(result.text);
+      const data = JSON.parse(response.text);
       if (data.reading) setNewReading(data.reading);
       if (data.pitchAccent) setNewPitchAccent(data.pitchAccent);
       if (data.meaning) setNewMeaning(data.meaning);
