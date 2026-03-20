@@ -22,6 +22,40 @@ async function startServer() {
   }
 
   // API Routes
+  app.post("/api/ai", async (req, res) => {
+    try {
+      const { contents, systemInstruction, responseMimeType, responseSchema, apiKey } = req.body;
+      const openai = getOpenAI(apiKey);
+      
+      // Map Gemini-style contents to OpenAI-style messages
+      const messages: any[] = [];
+      if (systemInstruction) {
+        messages.push({ role: "system", content: systemInstruction });
+      }
+
+      if (contents) {
+        contents.forEach((content: any) => {
+          messages.push({
+            role: content.role === 'model' ? 'assistant' : content.role,
+            content: content.parts[0].text
+          });
+        });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "deepseek-chat",
+        messages,
+        response_format: responseMimeType === 'application/json' ? { type: 'json_object' } : undefined,
+        temperature: 0.7,
+      });
+
+      res.json({ text: response.choices[0].message.content });
+    } catch (error: any) {
+      console.error("DeepSeek API error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/quiz", async (req, res) => {
     try {
       const { vocabList, grammarList, customPrompt, apiKey, messages, action } = req.body;
