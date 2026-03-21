@@ -7,14 +7,15 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
-  const { profile, updateApiKey } = useAuth();
+  const { profile, updateApiSettings } = useAuth();
   const [apiKey, setApiKey] = useState(profile?.deepseekApiKey || '');
+  const [baseUrl, setBaseUrl] = useState(profile?.deepseekBaseUrl || 'https://api.deepseek.com');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateApiKey(apiKey);
+      await updateApiSettings(apiKey.trim(), baseUrl.trim());
       onClose();
     } catch (error) {
       console.error('Failed to save API key:', error);
@@ -50,10 +51,22 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-..."
+              className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl p-3 text-gray-700 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all mb-4"
+            />
+            
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              API Base URL (可选)
+            </label>
+            <input
+              type="text"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="https://api.deepseek.com"
               className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl p-3 text-gray-700 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
             />
-            <p className="text-xs text-gray-500 mt-2">
-              绑定您的 DeepSeek API Key 以启用 AI 测验和划词翻译功能。您的 Key 将安全地加密保存在云端。
+            
+            <p className="text-xs text-gray-500 mt-3">
+              绑定您的 DeepSeek API Key 以启用 AI 测验和划词翻译功能。如果您使用第三方代理（如 SiliconFlow），请修改 Base URL。您的 Key 将安全地加密保存在云端。
             </p>
           </div>
 

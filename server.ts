@@ -10,14 +10,14 @@ async function startServer() {
   app.use(express.json());
 
   // Initialize OpenAI client for DeepSeek
-  function getOpenAI(userApiKey?: string) {
+  function getOpenAI(userApiKey?: string, apiBaseUrl?: string) {
     const key = userApiKey || process.env.DEEPSEEK_API_KEY;
     if (!key) {
       throw new Error("请先在设置中绑定您的 DeepSeek API Key");
     }
     return new OpenAI({
       apiKey: key,
-      baseURL: "https://api.deepseek.com/v1", // DeepSeek API base URL
+      baseURL: apiBaseUrl || "https://api.deepseek.com", // DeepSeek API base URL
     });
   }
 
@@ -48,8 +48,8 @@ async function startServer() {
   // API Routes
   app.post("/api/quiz", async (req, res) => {
     try {
-      const { vocabList, grammarList, customPrompt, apiKey } = req.body;
-      const openai = getOpenAI(apiKey);
+      const { vocabList, grammarList, customPrompt, apiKey, apiBaseUrl } = req.body;
+      const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const systemPrompt = `你是一个活泼的日语老师。请根据用户的词汇和语法列表，生成5道单项选择题。
       【严格要求】：
@@ -101,8 +101,8 @@ async function startServer() {
 
   app.post("/api/dictionary", async (req, res) => {
     try {
-      const { text, apiKey } = req.body;
-      const openai = getOpenAI(apiKey);
+      const { text, apiKey, apiBaseUrl } = req.body;
+      const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const response = await openai.chat.completions.create({
         model: "deepseek-chat",
@@ -128,8 +128,8 @@ async function startServer() {
 
   app.post("/api/vocab-lookup", async (req, res) => {
     try {
-      const { word, apiKey } = req.body;
-      const openai = getOpenAI(apiKey);
+      const { word, apiKey, apiBaseUrl } = req.body;
+      const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const response = await openai.chat.completions.create({
         model: "deepseek-chat",
@@ -161,8 +161,8 @@ async function startServer() {
 
   app.post("/api/grammar-lookup", async (req, res) => {
     try {
-      const { pattern, apiKey } = req.body;
-      const openai = getOpenAI(apiKey);
+      const { pattern, apiKey, apiBaseUrl } = req.body;
+      const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const response = await openai.chat.completions.create({
         model: "deepseek-chat",
@@ -193,8 +193,8 @@ async function startServer() {
 
   app.post("/api/ai-chat", async (req, res) => {
     try {
-      const { messages, systemInstruction, apiKey } = req.body;
-      const openai = getOpenAI(apiKey);
+      const { messages, systemInstruction, apiKey, apiBaseUrl } = req.body;
+      const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const response = await openai.chat.completions.create({
         model: "deepseek-chat",

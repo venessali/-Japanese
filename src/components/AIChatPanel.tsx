@@ -12,6 +12,7 @@ interface AIChatPanelProps {
   onAddVocab: (vocab: Omit<Vocabulary, 'id' | 'createdAt' | 'lastReviewed' | 'uid'>) => void;
   onAddGrammar: (grammar: Omit<Grammar, 'id' | 'createdAt' | 'lastReviewed' | 'uid'>) => void;
   apiKey?: string;
+  apiBaseUrl?: string;
 }
 
 interface Message {
@@ -23,7 +24,7 @@ interface Message {
   suggestedGrammar?: Array<{ pattern: string; meaning: string; example: string; notes: string }>;
 }
 
-export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVocab, onAddGrammar, apiKey }: AIChatPanelProps) {
+export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVocab, onAddGrammar, apiKey, apiBaseUrl }: AIChatPanelProps) {
   const [aiName, setAiName] = useState('AI 助教');
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -132,11 +133,15 @@ JSON Schema:
         body: JSON.stringify({
           messages: [...chatHistory, { role: 'user', content: prompt }],
           systemInstruction,
-          apiKey
+          apiKey,
+          apiBaseUrl
         })
       });
 
-      if (!response.ok) throw new Error('AI Chat failed');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'AI Chat failed');
+      }
       const parsed = await response.json();
       
       if (parsed) {
@@ -149,12 +154,12 @@ JSON Schema:
         };
         setMessages(prev => [...prev, newModelMessage]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending message:", error);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'model',
-        text: '抱歉，网络似乎出了点问题，请稍后再试。'
+        text: `抱歉，请求失败：${error.message || '网络似乎出了点问题，请稍后再试。'}`
       }]);
     } finally {
       setIsLoading(false);

@@ -19,6 +19,7 @@ interface StudyCenterProps {
   onDeleteGrammar: (id: string) => void;
   onEditGrammar: (id: string, updates: Partial<Grammar>) => void;
   apiKey?: string;
+  apiBaseUrl?: string;
 }
 
 export function StudyCenter({
@@ -33,7 +34,8 @@ export function StudyCenter({
   onUpdateGrammarTag,
   onDeleteGrammar,
   onEditGrammar,
-  apiKey
+  apiKey,
+  apiBaseUrl
 }: StudyCenterProps) {
   const [activeTab, setActiveTab] = useState<'vocab' | 'grammar'>(initialFilter?.type || 'vocab');
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,7 +59,7 @@ export function StudyCenter({
       const response = await fetch('/api/vocab-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word, apiKey })
+        body: JSON.stringify({ word, apiKey, apiBaseUrl })
       });
 
       if (!response.ok) throw new Error('AI Lookup failed');
@@ -95,7 +97,7 @@ export function StudyCenter({
       const response = await fetch('/api/grammar-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pattern, apiKey })
+        body: JSON.stringify({ pattern, apiKey, apiBaseUrl })
       });
 
       if (!response.ok) throw new Error('AI Lookup failed');

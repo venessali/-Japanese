@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 interface UserProfile {
   deepseekApiKey?: string;
+  deepseekBaseUrl?: string;
 }
 
 interface AuthContextType {
@@ -13,7 +14,7 @@ interface AuthContextType {
   loading: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
-  updateApiKey: (key: string) => Promise<void>;
+  updateApiSettings: (key: string, baseUrl?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -77,14 +78,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateApiKey = async (key: string) => {
+  const updateApiSettings = async (key: string, baseUrl?: string) => {
     if (!user) return;
     const userRef = doc(db, 'users', user.uid);
-    await setDoc(userRef, { deepseekApiKey: key }, { merge: true });
+    await setDoc(userRef, { 
+      deepseekApiKey: key,
+      deepseekBaseUrl: baseUrl || 'https://api.deepseek.com'
+    }, { merge: true });
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, logout, updateApiKey }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, logout, updateApiSettings }}>
       {children}
     </AuthContext.Provider>
   );
