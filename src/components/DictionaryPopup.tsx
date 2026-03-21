@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, Loader2 } from 'lucide-react';
 import Markdown from 'react-markdown';
@@ -85,7 +86,7 @@ export function DictionaryPopup({ apiKey }: DictionaryPopupProps) {
     return () => document.removeEventListener('mouseup', handleMouseUp);
   }, []);
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -97,7 +98,7 @@ export function DictionaryPopup({ apiKey }: DictionaryPopupProps) {
             position: 'absolute',
             left: Math.min(position.x, window.innerWidth - 320), // Prevent going off-screen
             top: position.y,
-            zIndex: 50,
+            zIndex: 99999,
           }}
           className="bg-white rounded-2xl shadow-xl border-2 border-indigo-100 w-80 overflow-hidden"
         >
@@ -130,6 +131,7 @@ export function DictionaryPopup({ apiKey }: DictionaryPopupProps) {
           </div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

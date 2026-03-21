@@ -3,7 +3,6 @@ import { Vocabulary, VocabTag } from '../types';
 import { Plus, CheckCircle2, Clock, XCircle, ExternalLink, Trash2, Wand2, Loader2 } from 'lucide-react';
 import { VocabDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
-import { GoogleGenAI, Type } from '@google/genai';
 
 interface VocabKanbanProps {
   vocabList: Vocabulary[];
@@ -12,6 +11,7 @@ interface VocabKanbanProps {
   onDeleteVocab: (id: string) => void;
   onViewAll?: () => void;
   onTagClick?: (tag: VocabTag) => void;
+  apiKey?: string;
 }
 
 const TAG_CONFIG = {
@@ -20,7 +20,7 @@ const TAG_CONFIG = {
   learning: { label: '完全没学会', icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' },
 };
 
-export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab, onViewAll, onTagClick }: VocabKanbanProps) {
+export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab, onViewAll, onTagClick, apiKey }: VocabKanbanProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [newReading, setNewReading] = useState('');
@@ -33,31 +33,23 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
   const [isLookingUp, setIsLookingUp] = useState(false);
 
   const handleAILookup = async () => {
-    if (!newWord.trim() || isLookingUp) return;
+    const wordToLookup = newWord.trim();
+    if (!wordToLookup || isLookingUp) return;
     
     setIsLookingUp(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Please provide details for the Japanese word: "${newWord}". 
-        Return the response in JSON format with fields: reading, pitchAccent, meaning, and notes (including a short example sentence).`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              reading: { type: Type.STRING },
-              pitchAccent: { type: Type.STRING },
-              meaning: { type: Type.STRING },
-              notes: { type: Type.STRING }
-            },
-            required: ['reading', 'meaning']
-          }
-        }
+      const response = await fetch('/api/vocab-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: wordToLookup, apiKey })
       });
 
-      const data = JSON.parse(response.text);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'AI Lookup failed');
+      }
+
+      const data = await response.json();
       if (data.reading) setNewReading(data.reading);
       if (data.pitchAccent) setNewPitchAccent(data.pitchAccent);
       if (data.meaning) setNewMeaning(data.meaning);

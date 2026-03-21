@@ -3,7 +3,6 @@ import { Grammar, VocabTag } from '../types';
 import { Plus, BookOpen, ExternalLink, Trash2, CheckCircle2, Clock, XCircle, Wand2, Loader2 } from 'lucide-react';
 import { GrammarDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
-import { GoogleGenAI, Type } from '@google/genai';
 
 interface GrammarSectionProps {
   grammarList: Grammar[];
@@ -12,6 +11,7 @@ interface GrammarSectionProps {
   onUpdateTag: (id: string, tag: VocabTag) => void;
   onViewAll?: () => void;
   onTagClick?: (tag: VocabTag) => void;
+  apiKey?: string;
 }
 
 const TAG_CONFIG = {
@@ -20,7 +20,7 @@ const TAG_CONFIG = {
   learning: { label: '完全没学会', icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' },
 };
 
-export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onUpdateTag, onViewAll, onTagClick }: GrammarSectionProps) {
+export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onUpdateTag, onViewAll, onTagClick, apiKey }: GrammarSectionProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newPattern, setNewPattern] = useState('');
   const [newMeaning, setNewMeaning] = useState('');
@@ -33,30 +33,23 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
   const [isLookingUp, setIsLookingUp] = useState(false);
 
   const handleAILookup = async () => {
-    if (!newPattern.trim() || isLookingUp) return;
+    const patternToLookup = newPattern.trim();
+    if (!patternToLookup || isLookingUp) return;
     
     setIsLookingUp(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Please provide details for the Japanese grammar pattern: "${newPattern}". 
-        Return the response in JSON format with fields: meaning, example, and notes (additional usage tips).`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              meaning: { type: Type.STRING },
-              example: { type: Type.STRING },
-              notes: { type: Type.STRING }
-            },
-            required: ['meaning', 'example']
-          }
-        }
+      const response = await fetch('/api/grammar-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pattern: patternToLookup, apiKey })
       });
 
-      const data = JSON.parse(response.text);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'AI Lookup failed');
+      }
+
+      const data = await response.json();
       if (data.meaning) setNewMeaning(data.meaning);
       if (data.example) setNewExample(data.example);
       if (data.notes) setNewNotes(data.notes);

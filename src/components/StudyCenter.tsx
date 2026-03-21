@@ -18,6 +18,7 @@ interface StudyCenterProps {
   onUpdateGrammarTag: (id: string, tag: VocabTag) => void;
   onDeleteGrammar: (id: string) => void;
   onEditGrammar: (id: string, updates: Partial<Grammar>) => void;
+  apiKey?: string;
 }
 
 export function StudyCenter({
@@ -31,7 +32,8 @@ export function StudyCenter({
   onAddGrammar,
   onUpdateGrammarTag,
   onDeleteGrammar,
-  onEditGrammar
+  onEditGrammar,
+  apiKey
 }: StudyCenterProps) {
   const [activeTab, setActiveTab] = useState<'vocab' | 'grammar'>(initialFilter?.type || 'vocab');
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,27 +54,15 @@ export function StudyCenter({
     
     setIsLookingUp(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Please provide details for the Japanese word: "${word}". 
-        Return the response in JSON format with fields: reading, pitchAccent, meaning, and notes (including a short example sentence).`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              reading: { type: Type.STRING },
-              pitchAccent: { type: Type.STRING },
-              meaning: { type: Type.STRING },
-              notes: { type: Type.STRING }
-            },
-            required: ['reading', 'meaning']
-          }
-        }
+      const response = await fetch('/api/vocab-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word, apiKey })
       });
 
-      const data = JSON.parse(response.text);
+      if (!response.ok) throw new Error('AI Lookup failed');
+      const data = await response.json();
+      
       if (isEditing && editingVocab) {
         setEditingVocab({
           ...editingVocab,
@@ -102,26 +92,15 @@ export function StudyCenter({
     
     setIsLookingUp(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Please provide details for the Japanese grammar pattern: "${pattern}". 
-        Return the response in JSON format with fields: meaning, example, and notes (additional usage tips).`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              meaning: { type: Type.STRING },
-              example: { type: Type.STRING },
-              notes: { type: Type.STRING }
-            },
-            required: ['meaning', 'example']
-          }
-        }
+      const response = await fetch('/api/grammar-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pattern, apiKey })
       });
 
-      const data = JSON.parse(response.text);
+      if (!response.ok) throw new Error('AI Lookup failed');
+      const data = await response.json();
+
       if (isEditing && editingGrammar) {
         setEditingGrammar({
           ...editingGrammar,

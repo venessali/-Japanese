@@ -268,6 +268,7 @@ export default function App() {
                     setStudyFilter({ type: 'vocab', tag });
                     setActiveTab('study');
                   }}
+                  apiKey={profile?.deepseekApiKey}
                 />
               </div>
               <div className="lg:col-span-5 h-[500px]">
@@ -281,6 +282,7 @@ export default function App() {
                     setStudyFilter({ type: 'grammar', tag });
                     setActiveTab('study');
                   }}
+                  apiKey={profile?.deepseekApiKey}
                 />
               </div>
               <div className="lg:col-span-6 h-[450px]">
@@ -322,6 +324,7 @@ export default function App() {
               onUpdateGrammarTag={handleUpdateGrammarTag}
               onDeleteGrammar={handleDeleteGrammar}
               onEditGrammar={handleEditGrammar}
+              apiKey={profile?.deepseekApiKey}
             />
           </div>
         )}
@@ -349,6 +352,7 @@ export default function App() {
         grammarList={grammarList}
         onAddVocab={handleAddVocab}
         onAddGrammar={handleAddGrammar}
+        apiKey={profile?.deepseekApiKey}
       />
       
       <footer className="bg-white border-t-4 border-orange-100 py-8 mt-12 text-center text-gray-400 font-medium text-sm">

@@ -24,42 +24,37 @@ async function startServer() {
   // API Routes
   app.post("/api/quiz", async (req, res) => {
     try {
-      const { vocabList, grammarList, customPrompt, apiKey, messages, action } = req.body;
+      const { vocabList, grammarList, customPrompt, apiKey } = req.body;
       const openai = getOpenAI(apiKey);
 
-      const systemPrompt = `You are a fun, energetic (genki) Japanese teacher.
-You are conducting a multi-turn interactive quiz.
-Rules:
-1. 使用简体中文作为出题和讲解语言。
-2. 语言风格简练准确。
-3. If the user asks to start a quiz, generate 3-5 questions based on their vocabulary and grammar list. DO NOT provide the answers yet. Ask the user to reply with their answers.
-4. When the user replies with their answers, evaluate them carefully. Point out any mistakes, explain the corrections gently, and give a final score. Use emoticons like (≧◡≦) or (´• ω •\`)!
-5. Keep the formatting clean using Markdown.
-
-User's Data Context:
-Vocabulary: ${JSON.stringify(vocabList || [])}
-Grammar: ${JSON.stringify(grammarList || [])}`;
+      const systemPrompt = `你是一个活泼的日语老师。请根据用户的词汇和语法列表，生成5道单项选择题。
+      必须使用简体中文作为出题、翻译和讲解的语言，严禁使用繁体中文或其他语言。
+      请以 JSON 格式返回，包含一个 'questions' 数组。
+      每道题包含以下字段：
+      - question: 题目内容（如果是填空题，请用 ___ 表示空缺）
+      - options: 4个选项的字符串数组
+      - correctAnswerIndex: 正确选项的索引（0-3的整数）
+      - explanation: 详细的错题解析，解释为什么选这个，其他选项为什么错。
+      
+      用户数据：
+      词汇：${JSON.stringify(vocabList || [])}
+      语法：${JSON.stringify(grammarList || [])}`;
 
       const finalSystemPrompt = customPrompt 
-        ? `${systemPrompt}\n\nUser Preferences/Requirements:\n${customPrompt}`
+        ? `${systemPrompt}\n\n用户的特殊要求：\n${customPrompt}`
         : systemPrompt;
-
-      let apiMessages: any[] = [{ role: "system", content: finalSystemPrompt }];
-
-      if (action === 'start') {
-        const userMessage = `Please generate the quiz questions now based on my data. Remember, DO NOT show the answers yet. Wait for my reply.`;
-        apiMessages.push({ role: "user", content: userMessage });
-      } else if (action === 'chat') {
-        apiMessages = apiMessages.concat(messages);
-      }
 
       const response = await openai.chat.completions.create({
         model: "deepseek-chat",
-        messages: apiMessages,
+        messages: [
+          { role: "system", content: finalSystemPrompt },
+          { role: "user", content: "请生成5道选择题。" }
+        ],
+        response_format: { type: 'json_object' },
         temperature: 0.7,
       });
 
-      res.json({ text: response.choices[0].message.content });
+      res.json(JSON.parse(response.choices[0].message.content || "{}"));
     } catch (error: any) {
       console.error("Quiz generation error:", error);
       res.status(500).json({ error: error.message });
@@ -86,6 +81,90 @@ Grammar: ${JSON.stringify(grammarList || [])}`;
       res.json({ text: response.choices[0].message.content });
     } catch (error: any) {
       console.error("Dictionary lookup error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/vocab-lookup", async (req, res) => {
+    try {
+      const { word, apiKey } = req.body;
+      const openai = getOpenAI(apiKey);
+
+      const response = await openai.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content: `你是一个专业的日语老师。请为给定的日语单词提供详细信息。
+            必须使用简体中文进行解释和翻译，严禁使用繁体中文或其他语言。
+            请以 JSON 格式返回，包含以下字段：
+            - reading: 假名读音
+            - pitchAccent: 声调（如 0, 1）
+            - meaning: 中文含义
+            - notes: 包含一个简单的日语例句及其中文翻译。
+            例句中的汉字请用括号标注假名。`
+          },
+          { role: "user", content: `单词: "${word}"` }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+      });
+
+      res.json(JSON.parse(response.choices[0].message.content || "{}"));
+    } catch (error: any) {
+      console.error("Vocab lookup error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/grammar-lookup", async (req, res) => {
+    try {
+      const { pattern, apiKey } = req.body;
+      const openai = getOpenAI(apiKey);
+
+      const response = await openai.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content: `你是一个专业的日语老师。请为给定的日语语法句型提供详细信息。
+            必须使用简体中文进行解释和翻译，严禁使用繁体中文或其他语言。
+            请以 JSON 格式返回，包含以下字段：
+            - meaning: 中文含义
+            - example: 一个简单的日语例句及其中文翻译。例句中的汉字请用括号标注假名。
+            - notes: 额外的使用提示或注意事项（中文）。`
+          },
+          { role: "user", content: `语法: "${pattern}"` }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+      });
+
+      res.json(JSON.parse(response.choices[0].message.content || "{}"));
+    } catch (error: any) {
+      console.error("Grammar lookup error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai-chat", async (req, res) => {
+    try {
+      const { messages, systemInstruction, apiKey } = req.body;
+      const openai = getOpenAI(apiKey);
+
+      const response = await openai.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: `${systemInstruction}\n\n重要指令：必须使用简体中文作为主要的交流、翻译和解释语言。` },
+          ...messages
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.7,
+      });
+
+      res.json(JSON.parse(response.choices[0].message.content || "{}"));
+    } catch (error: any) {
+      console.error("AI Chat error:", error);
       res.status(500).json({ error: error.message });
     }
   });
