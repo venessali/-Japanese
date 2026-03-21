@@ -13,6 +13,7 @@ interface GrammarSectionProps {
   onTagClick?: (tag: VocabTag) => void;
   apiKey?: string;
   apiBaseUrl?: string;
+  apiModelName?: string;
 }
 
 const TAG_CONFIG = {
@@ -21,7 +22,7 @@ const TAG_CONFIG = {
   learning: { label: '完全没学会', icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' },
 };
 
-export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onUpdateTag, onViewAll, onTagClick, apiKey, apiBaseUrl }: GrammarSectionProps) {
+export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onUpdateTag, onViewAll, onTagClick, apiKey, apiBaseUrl, apiModelName }: GrammarSectionProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newPattern, setNewPattern] = useState('');
   const [newMeaning, setNewMeaning] = useState('');
@@ -42,7 +43,7 @@ export function GrammarSection({ grammarList, onAddGrammar, onDeleteGrammar, onU
       const response = await fetch('/api/grammar-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pattern: patternToLookup, apiKey, apiBaseUrl })
+        body: JSON.stringify({ pattern: patternToLookup, apiKey, apiBaseUrl, apiModelName })
       });
 
       if (!response.ok) {

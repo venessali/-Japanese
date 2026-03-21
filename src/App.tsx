@@ -177,7 +177,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-orange-50/50 font-sans text-gray-800 selection:bg-orange-200 selection:text-orange-900">
-      <DictionaryPopup apiKey={profile?.deepseekApiKey} apiBaseUrl={profile?.deepseekBaseUrl} />
+      <DictionaryPopup apiKey={profile?.deepseekApiKey} apiBaseUrl={profile?.deepseekBaseUrl} apiModelName={profile?.apiModelName} />
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       
       <header className="bg-white border-b-4 border-orange-100 sticky top-0 z-40 shadow-sm">
@@ -270,6 +270,7 @@ export default function App() {
                   }}
                   apiKey={profile?.deepseekApiKey}
                   apiBaseUrl={profile?.deepseekBaseUrl}
+                  apiModelName={profile?.apiModelName}
                 />
               </div>
               <div className="lg:col-span-5 h-[500px]">
@@ -285,10 +286,11 @@ export default function App() {
                   }}
                   apiKey={profile?.deepseekApiKey}
                   apiBaseUrl={profile?.deepseekBaseUrl}
+                  apiModelName={profile?.apiModelName}
                 />
               </div>
               <div className="lg:col-span-6 h-[450px]">
-                <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} apiBaseUrl={profile?.deepseekBaseUrl} />
+                <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} apiBaseUrl={profile?.deepseekBaseUrl} apiModelName={profile?.apiModelName} />
               </div>
               <div className="lg:col-span-6 h-[450px]">
                 <VocabMatch 
@@ -328,6 +330,7 @@ export default function App() {
               onEditGrammar={handleEditGrammar}
               apiKey={profile?.deepseekApiKey}
               apiBaseUrl={profile?.deepseekBaseUrl}
+              apiModelName={profile?.apiModelName}
             />
           </div>
         )}
@@ -357,6 +360,7 @@ export default function App() {
         onAddGrammar={handleAddGrammar}
         apiKey={profile?.deepseekApiKey}
         apiBaseUrl={profile?.deepseekBaseUrl}
+        apiModelName={profile?.apiModelName}
       />
       
       <footer className="bg-white border-t-4 border-orange-100 py-8 mt-12 text-center text-gray-400 font-medium text-sm">

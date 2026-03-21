@@ -20,6 +20,7 @@ interface StudyCenterProps {
   onEditGrammar: (id: string, updates: Partial<Grammar>) => void;
   apiKey?: string;
   apiBaseUrl?: string;
+  apiModelName?: string;
 }
 
 export function StudyCenter({
@@ -35,7 +36,8 @@ export function StudyCenter({
   onDeleteGrammar,
   onEditGrammar,
   apiKey,
-  apiBaseUrl
+  apiBaseUrl,
+  apiModelName
 }: StudyCenterProps) {
   const [activeTab, setActiveTab] = useState<'vocab' | 'grammar'>(initialFilter?.type || 'vocab');
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,10 +61,13 @@ export function StudyCenter({
       const response = await fetch('/api/vocab-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word, apiKey, apiBaseUrl })
+        body: JSON.stringify({ word, apiKey, apiBaseUrl, apiModelName })
       });
 
-      if (!response.ok) throw new Error('AI Lookup failed');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'AI Lookup failed');
+      }
       const data = await response.json();
       
       if (isEditing && editingVocab) {
@@ -82,8 +87,9 @@ export function StudyCenter({
           notes: data.notes || newVocab.notes
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Lookup failed:", error);
+      alert(error.message || 'AI Lookup failed');
     } finally {
       setIsLookingUp(false);
     }
@@ -97,10 +103,13 @@ export function StudyCenter({
       const response = await fetch('/api/grammar-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pattern, apiKey, apiBaseUrl })
+        body: JSON.stringify({ pattern, apiKey, apiBaseUrl, apiModelName })
       });
 
-      if (!response.ok) throw new Error('AI Lookup failed');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'AI Lookup failed');
+      }
       const data = await response.json();
 
       if (isEditing && editingGrammar) {
@@ -118,8 +127,9 @@ export function StudyCenter({
           notes: data.notes || newGrammar.notes
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Lookup failed:", error);
+      alert(error.message || 'AI Lookup failed');
     } finally {
       setIsLookingUp(false);
     }

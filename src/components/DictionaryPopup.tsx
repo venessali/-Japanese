@@ -7,9 +7,10 @@ import Markdown from 'react-markdown';
 interface DictionaryPopupProps {
   apiKey?: string;
   apiBaseUrl?: string;
+  apiModelName?: string;
 }
 
-export function DictionaryPopup({ apiKey, apiBaseUrl }: DictionaryPopupProps) {
+export function DictionaryPopup({ apiKey, apiBaseUrl, apiModelName }: DictionaryPopupProps) {
   const [selectedText, setSelectedText] = useState('');
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isOpen, setIsOpen] = useState(false);
@@ -18,10 +19,12 @@ export function DictionaryPopup({ apiKey, apiBaseUrl }: DictionaryPopupProps) {
 
   const apiKeyRef = React.useRef(apiKey);
   const apiBaseUrlRef = React.useRef(apiBaseUrl);
+  const apiModelNameRef = React.useRef(apiModelName);
   useEffect(() => {
     apiKeyRef.current = apiKey;
     apiBaseUrlRef.current = apiBaseUrl;
-  }, [apiKey, apiBaseUrl]);
+    apiModelNameRef.current = apiModelName;
+  }, [apiKey, apiBaseUrl, apiModelName]);
 
   useEffect(() => {
     const fetchExplanation = async (text: string) => {
@@ -33,7 +36,7 @@ export function DictionaryPopup({ apiKey, apiBaseUrl }: DictionaryPopupProps) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ text, apiKey: apiKeyRef.current, apiBaseUrl: apiBaseUrlRef.current }),
+          body: JSON.stringify({ text, apiKey: apiKeyRef.current, apiBaseUrl: apiBaseUrlRef.current, apiModelName: apiModelNameRef.current }),
         });
 
         if (!response.ok) {

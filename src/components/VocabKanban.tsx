@@ -13,6 +13,7 @@ interface VocabKanbanProps {
   onTagClick?: (tag: VocabTag) => void;
   apiKey?: string;
   apiBaseUrl?: string;
+  apiModelName?: string;
 }
 
 const TAG_CONFIG = {
@@ -21,7 +22,7 @@ const TAG_CONFIG = {
   learning: { label: '完全没学会', icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' },
 };
 
-export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab, onViewAll, onTagClick, apiKey, apiBaseUrl }: VocabKanbanProps) {
+export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab, onViewAll, onTagClick, apiKey, apiBaseUrl, apiModelName }: VocabKanbanProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [newReading, setNewReading] = useState('');
@@ -42,7 +43,7 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
       const response = await fetch('/api/vocab-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: wordToLookup, apiKey, apiBaseUrl })
+        body: JSON.stringify({ word: wordToLookup, apiKey, apiBaseUrl, apiModelName })
       });
 
       if (!response.ok) {

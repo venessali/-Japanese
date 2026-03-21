@@ -48,7 +48,7 @@ async function startServer() {
   // API Routes
   app.post("/api/quiz", async (req, res) => {
     try {
-      const { vocabList, grammarList, customPrompt, apiKey, apiBaseUrl } = req.body;
+      const { vocabList, grammarList, customPrompt, apiKey, apiBaseUrl, apiModelName } = req.body;
       const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const systemPrompt = `你是一个活泼的日语老师。请根据用户的词汇和语法列表，生成5道单项选择题。
@@ -84,7 +84,7 @@ async function startServer() {
         : systemPrompt;
 
       const response = await openai.chat.completions.create({
-        model: "deepseek-chat",
+        model: apiModelName || "deepseek-chat",
         messages: [
           { role: "system", content: finalSystemPrompt },
           { role: "user", content: "请生成5道选择题。" }
@@ -101,11 +101,11 @@ async function startServer() {
 
   app.post("/api/dictionary", async (req, res) => {
     try {
-      const { text, apiKey, apiBaseUrl } = req.body;
+      const { text, apiKey, apiBaseUrl, apiModelName } = req.body;
       const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const response = await openai.chat.completions.create({
-        model: "deepseek-chat",
+        model: apiModelName || "deepseek-chat",
         messages: [
           { 
             role: "system", 
@@ -128,11 +128,11 @@ async function startServer() {
 
   app.post("/api/vocab-lookup", async (req, res) => {
     try {
-      const { word, apiKey, apiBaseUrl } = req.body;
+      const { word, apiKey, apiBaseUrl, apiModelName } = req.body;
       const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const response = await openai.chat.completions.create({
-        model: "deepseek-chat",
+        model: apiModelName || "deepseek-chat",
         messages: [
           {
             role: "system",
@@ -161,11 +161,11 @@ async function startServer() {
 
   app.post("/api/grammar-lookup", async (req, res) => {
     try {
-      const { pattern, apiKey, apiBaseUrl } = req.body;
+      const { pattern, apiKey, apiBaseUrl, apiModelName } = req.body;
       const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const response = await openai.chat.completions.create({
-        model: "deepseek-chat",
+        model: apiModelName || "deepseek-chat",
         messages: [
           {
             role: "system",
@@ -193,11 +193,11 @@ async function startServer() {
 
   app.post("/api/ai-chat", async (req, res) => {
     try {
-      const { messages, systemInstruction, apiKey, apiBaseUrl } = req.body;
+      const { messages, systemInstruction, apiKey, apiBaseUrl, apiModelName } = req.body;
       const openai = getOpenAI(apiKey, apiBaseUrl);
 
       const response = await openai.chat.completions.create({
-        model: "deepseek-chat",
+        model: apiModelName || "deepseek-chat",
         messages: [
           { role: "system", content: `${systemInstruction}\n\n【重要指令】：\n1. 必须使用简体中文作为主要的交流、翻译和解释语言。\n2. 必须且只能返回一个合法的 JSON 对象，不要包含任何 Markdown 标记（如 \`\`\`json）。` },
           ...messages

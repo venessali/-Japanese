@@ -10,12 +10,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const { profile, updateApiSettings } = useAuth();
   const [apiKey, setApiKey] = useState(profile?.deepseekApiKey || '');
   const [baseUrl, setBaseUrl] = useState(profile?.deepseekBaseUrl || 'https://api.deepseek.com');
+  const [modelName, setModelName] = useState(profile?.apiModelName || 'deepseek-chat');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateApiSettings(apiKey.trim(), baseUrl.trim());
+      await updateApiSettings(apiKey.trim(), baseUrl.trim(), modelName.trim());
       onClose();
     } catch (error) {
       console.error('Failed to save API key:', error);
@@ -62,11 +63,22 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://api.deepseek.com"
+              className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl p-3 text-gray-700 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all mb-4"
+            />
+
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              模型名称 (可选)
+            </label>
+            <input
+              type="text"
+              value={modelName}
+              onChange={(e) => setModelName(e.target.value)}
+              placeholder="deepseek-chat"
               className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl p-3 text-gray-700 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
             />
             
             <p className="text-xs text-gray-500 mt-3">
-              绑定您的 DeepSeek API Key 以启用 AI 测验和划词翻译功能。如果您使用第三方代理（如 SiliconFlow），请修改 Base URL。您的 Key 将安全地加密保存在云端。
+              绑定您的 API Key 以启用 AI 测验和划词翻译功能。如果您使用第三方代理（如 SiliconFlow）或 Gemini 等其他兼容接口，请修改 Base URL 和模型名称。您的 Key 将安全地加密保存在云端。
             </p>
           </div>
 

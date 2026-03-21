@@ -13,6 +13,7 @@ interface AIChatPanelProps {
   onAddGrammar: (grammar: Omit<Grammar, 'id' | 'createdAt' | 'lastReviewed' | 'uid'>) => void;
   apiKey?: string;
   apiBaseUrl?: string;
+  apiModelName?: string;
 }
 
 interface Message {
@@ -24,7 +25,7 @@ interface Message {
   suggestedGrammar?: Array<{ pattern: string; meaning: string; example: string; notes: string }>;
 }
 
-export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVocab, onAddGrammar, apiKey, apiBaseUrl }: AIChatPanelProps) {
+export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVocab, onAddGrammar, apiKey, apiBaseUrl, apiModelName }: AIChatPanelProps) {
   const [aiName, setAiName] = useState('AI 助教');
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -134,7 +135,8 @@ JSON Schema:
           messages: [...chatHistory, { role: 'user', content: prompt }],
           systemInstruction,
           apiKey,
-          apiBaseUrl
+          apiBaseUrl,
+          apiModelName
         })
       });
 

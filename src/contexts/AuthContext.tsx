@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 interface UserProfile {
   deepseekApiKey?: string;
   deepseekBaseUrl?: string;
+  apiModelName?: string;
 }
 
 interface AuthContextType {
@@ -14,7 +15,7 @@ interface AuthContextType {
   loading: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
-  updateApiSettings: (key: string, baseUrl?: string) => Promise<void>;
+  updateApiSettings: (key: string, baseUrl?: string, modelName?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -78,12 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateApiSettings = async (key: string, baseUrl?: string) => {
+  const updateApiSettings = async (key: string, baseUrl?: string, modelName?: string) => {
     if (!user) return;
     const userRef = doc(db, 'users', user.uid);
     await setDoc(userRef, { 
       deepseekApiKey: key,
-      deepseekBaseUrl: baseUrl || 'https://api.deepseek.com'
+      deepseekBaseUrl: baseUrl || 'https://api.deepseek.com',
+      apiModelName: modelName || 'deepseek-chat'
     }, { merge: true });
   };
 

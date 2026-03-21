@@ -9,6 +9,7 @@ interface AIQuizProps {
   grammarList: Grammar[];
   apiKey?: string;
   apiBaseUrl?: string;
+  apiModelName?: string;
 }
 
 interface Question {
@@ -18,7 +19,7 @@ interface Question {
   explanation: string;
 }
 
-export function AIQuiz({ vocabList, grammarList, apiKey, apiBaseUrl }: AIQuizProps) {
+export function AIQuiz({ vocabList, grammarList, apiKey, apiBaseUrl, apiModelName }: AIQuizProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -57,7 +58,8 @@ export function AIQuiz({ vocabList, grammarList, apiKey, apiBaseUrl }: AIQuizPro
           grammarList,
           customPrompt,
           apiKey,
-          apiBaseUrl
+          apiBaseUrl,
+          apiModelName
         }),
       });
 
