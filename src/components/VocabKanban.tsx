@@ -54,8 +54,9 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
       if (data.pitchAccent) setNewPitchAccent(data.pitchAccent);
       if (data.meaning) setNewMeaning(data.meaning);
       if (data.notes) setNewNotes(data.notes);
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Lookup failed:", error);
+      alert(error.message || 'AI 补全失败，请检查网络或 API Key。');
     } finally {
       setIsLookingUp(false);
     }

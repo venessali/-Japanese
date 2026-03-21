@@ -17,7 +17,7 @@ async function startServer() {
     }
     return new OpenAI({
       apiKey: key,
-      baseURL: "https://api.deepseek.com", // DeepSeek API base URL
+      baseURL: "https://api.deepseek.com/v1", // DeepSeek API base URL
     });
   }
 
@@ -89,7 +89,6 @@ async function startServer() {
           { role: "system", content: finalSystemPrompt },
           { role: "user", content: "请生成5道选择题。" }
         ],
-        response_format: { type: 'json_object' },
         temperature: 0.7,
       });
 
@@ -110,15 +109,12 @@ async function startServer() {
         messages: [
           { 
             role: "system", 
-            content: `你是一个有用的日语词典助手。
-            【严格要求】：
-            1. 除了目标单词、假名读音和日文例句本身外，所有的解释、翻译、语法说明等【必须全部使用简体中文】。
-            2. 严禁使用全日文回复！严禁使用繁体中文！
-            3. 请提供给定日语文本的简短解释、发音（平假名/罗马音）以及一个简单的例句。
-            4. 例句中的汉字必须用括号标明平假名（例如：私（わたし））。
-            5. 保持回答简明扼要。`
+            content: `你是一个中日词典助手。你的任务是将用户输入的日语翻译成中文，并用中文进行简短解释。
+            【最高指令】：
+            除了日文原词、假名读音和日文例句本身外，所有的解释、翻译、语法说明等必须100%使用简体中文。
+            绝对不允许用全日语回复！`
           },
-          { role: "user", content: text }
+          { role: "user", content: `请用简体中文解释这个日语单词/句子，提供发音（平假名/罗马音）以及一个简单的例句（例句中的汉字用括号标明平假名）：\n\n${text}` }
         ],
         temperature: 0.3,
       });
@@ -153,7 +149,6 @@ async function startServer() {
           },
           { role: "user", content: `单词: "${word}"` }
         ],
-        response_format: { type: 'json_object' },
         temperature: 0.3,
       });
 
@@ -186,7 +181,6 @@ async function startServer() {
           },
           { role: "user", content: `语法: "${pattern}"` }
         ],
-        response_format: { type: 'json_object' },
         temperature: 0.3,
       });
 
@@ -208,7 +202,6 @@ async function startServer() {
           { role: "system", content: `${systemInstruction}\n\n【重要指令】：\n1. 必须使用简体中文作为主要的交流、翻译和解释语言。\n2. 必须且只能返回一个合法的 JSON 对象，不要包含任何 Markdown 标记（如 \`\`\`json）。` },
           ...messages
         ],
-        response_format: { type: 'json_object' },
         temperature: 0.7,
       });
 

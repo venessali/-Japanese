@@ -93,6 +93,12 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
     setInput('');
     setTags([]);
     setIsLoading(true);
+    
+    // Reset textarea height
+    const textarea = document.querySelector('textarea[placeholder^="输入问题"]');
+    if (textarea instanceof HTMLTextAreaElement) {
+      textarea.style.height = 'auto';
+    }
 
     try {
       let prompt = userMessageText;
@@ -373,7 +379,11 @@ JSON Schema:
                   <div className="flex items-end gap-2">
                     <textarea
                       value={input}
-                      onChange={(e) => setInput(e.target.value)}
+                      onChange={(e) => {
+                        setInput(e.target.value);
+                        e.target.style.height = 'auto';
+                        e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`;
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                           e.preventDefault();
@@ -383,6 +393,7 @@ JSON Schema:
                       placeholder="输入问题，按 Cmd/Ctrl + Enter 发送..."
                       className="flex-1 max-h-32 min-h-[40px] p-2 bg-transparent resize-none focus:outline-none text-sm"
                       rows={1}
+                      style={{ overflowY: 'auto' }}
                     />
                     <button
                       onClick={handleSend}
