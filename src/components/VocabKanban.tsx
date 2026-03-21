@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Vocabulary, VocabTag } from '../types';
-import { Plus, CheckCircle2, Clock, XCircle, ExternalLink, Trash2, Wand2, Loader2 } from 'lucide-react';
+import { Plus, CheckCircle2, Clock, XCircle, ExternalLink, Trash2 } from 'lucide-react';
 import { VocabDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -11,9 +11,6 @@ interface VocabKanbanProps {
   onDeleteVocab: (id: string) => void;
   onViewAll?: () => void;
   onTagClick?: (tag: VocabTag) => void;
-  apiKey?: string;
-  apiBaseUrl?: string;
-  apiModelName?: string;
 }
 
 const TAG_CONFIG = {
@@ -22,7 +19,7 @@ const TAG_CONFIG = {
   learning: { label: '完全没学会', icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' },
 };
 
-export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab, onViewAll, onTagClick, apiKey, apiBaseUrl, apiModelName }: VocabKanbanProps) {
+export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab, onViewAll, onTagClick }: VocabKanbanProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [newReading, setNewReading] = useState('');
@@ -32,37 +29,6 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
   const [newSource, setNewSource] = useState('');
   const [selectedVocab, setSelectedVocab] = useState<Vocabulary | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isLookingUp, setIsLookingUp] = useState(false);
-
-  const handleAILookup = async () => {
-    const wordToLookup = newWord.trim();
-    if (!wordToLookup || isLookingUp) return;
-    
-    setIsLookingUp(true);
-    try {
-      const response = await fetch('/api/vocab-lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: wordToLookup, apiKey, apiBaseUrl, apiModelName })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'AI Lookup failed');
-      }
-
-      const data = await response.json();
-      if (data.reading) setNewReading(data.reading);
-      if (data.pitchAccent) setNewPitchAccent(data.pitchAccent);
-      if (data.meaning) setNewMeaning(data.meaning);
-      if (data.notes) setNewNotes(data.notes);
-    } catch (error: any) {
-      console.error("AI Lookup failed:", error);
-      alert(error.message || 'AI 补全失败，请检查网络或 API Key。');
-    } finally {
-      setIsLookingUp(false);
-    }
-  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,26 +155,15 @@ export function VocabKanban({ vocabList, onAddVocab, onUpdateTag, onDeleteVocab,
 
       {isAdding && (
         <form onSubmit={handleAdd} className="mb-6 bg-sky-50 p-4 rounded-2xl border-2 border-sky-200 space-y-3">
-          <div className="flex gap-2">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                placeholder="单词 (e.g. 食べる)"
-                value={newWord}
-                onChange={(e) => setNewWord(e.target.value)}
-                className="px-3 py-2 rounded-xl border-2 border-white focus:border-sky-300 outline-none w-full pr-10"
-                required
-              />
-              <button
-                type="button"
-                onClick={handleAILookup}
-                disabled={!newWord.trim() || isLookingUp}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-sky-500 hover:bg-sky-100 rounded-lg transition-colors disabled:opacity-50"
-                title="AI 智能补全"
-              >
-                {isLookingUp ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-              </button>
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              placeholder="单词 (e.g. 食べる)"
+              value={newWord}
+              onChange={(e) => setNewWord(e.target.value)}
+              className="px-3 py-2 rounded-xl border-2 border-white focus:border-sky-300 outline-none w-full"
+              required
+            />
             <input
               type="text"
               placeholder="读音 (e.g. たべる)"

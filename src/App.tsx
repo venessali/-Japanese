@@ -177,7 +177,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-orange-50/50 font-sans text-gray-800 selection:bg-orange-200 selection:text-orange-900">
-      <DictionaryPopup apiKey={profile?.deepseekApiKey} apiBaseUrl={profile?.deepseekBaseUrl} apiModelName={profile?.apiModelName} />
+      <DictionaryPopup apiKey={profile?.deepseekApiKey} />
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       
       <header className="bg-white border-b-4 border-orange-100 sticky top-0 z-40 shadow-sm">
@@ -268,9 +268,6 @@ export default function App() {
                     setStudyFilter({ type: 'vocab', tag });
                     setActiveTab('study');
                   }}
-                  apiKey={profile?.deepseekApiKey}
-                  apiBaseUrl={profile?.deepseekBaseUrl}
-                  apiModelName={profile?.apiModelName}
                 />
               </div>
               <div className="lg:col-span-5 h-[500px]">
@@ -284,13 +281,10 @@ export default function App() {
                     setStudyFilter({ type: 'grammar', tag });
                     setActiveTab('study');
                   }}
-                  apiKey={profile?.deepseekApiKey}
-                  apiBaseUrl={profile?.deepseekBaseUrl}
-                  apiModelName={profile?.apiModelName}
                 />
               </div>
               <div className="lg:col-span-6 h-[450px]">
-                <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} apiBaseUrl={profile?.deepseekBaseUrl} apiModelName={profile?.apiModelName} />
+                <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} />
               </div>
               <div className="lg:col-span-6 h-[450px]">
                 <VocabMatch 
@@ -328,16 +322,13 @@ export default function App() {
               onUpdateGrammarTag={handleUpdateGrammarTag}
               onDeleteGrammar={handleDeleteGrammar}
               onEditGrammar={handleEditGrammar}
-              apiKey={profile?.deepseekApiKey}
-              apiBaseUrl={profile?.deepseekBaseUrl}
-              apiModelName={profile?.apiModelName}
             />
           </div>
         )}
 
         {activeTab === 'quiz' && (
           <div className="h-[calc(100vh-12rem)] max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} apiBaseUrl={profile?.deepseekBaseUrl} />
+            <AIQuiz vocabList={vocabList} grammarList={grammarList} apiKey={profile?.deepseekApiKey} />
           </div>
         )}
 
@@ -358,9 +349,6 @@ export default function App() {
         grammarList={grammarList}
         onAddVocab={handleAddVocab}
         onAddGrammar={handleAddGrammar}
-        apiKey={profile?.deepseekApiKey}
-        apiBaseUrl={profile?.deepseekBaseUrl}
-        apiModelName={profile?.apiModelName}
       />
       
       <footer className="bg-white border-t-4 border-orange-100 py-8 mt-12 text-center text-gray-400 font-medium text-sm">

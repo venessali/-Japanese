@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, Loader2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 
 interface DictionaryPopupProps {
   apiKey?: string;
-  apiBaseUrl?: string;
-  apiModelName?: string;
 }
 
-export function DictionaryPopup({ apiKey, apiBaseUrl, apiModelName }: DictionaryPopupProps) {
+export function DictionaryPopup({ apiKey }: DictionaryPopupProps) {
   const [selectedText, setSelectedText] = useState('');
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isOpen, setIsOpen] = useState(false);
@@ -18,13 +15,9 @@ export function DictionaryPopup({ apiKey, apiBaseUrl, apiModelName }: Dictionary
   const [isLoading, setIsLoading] = useState(false);
 
   const apiKeyRef = React.useRef(apiKey);
-  const apiBaseUrlRef = React.useRef(apiBaseUrl);
-  const apiModelNameRef = React.useRef(apiModelName);
   useEffect(() => {
     apiKeyRef.current = apiKey;
-    apiBaseUrlRef.current = apiBaseUrl;
-    apiModelNameRef.current = apiModelName;
-  }, [apiKey, apiBaseUrl, apiModelName]);
+  }, [apiKey]);
 
   useEffect(() => {
     const fetchExplanation = async (text: string) => {
@@ -36,7 +29,7 @@ export function DictionaryPopup({ apiKey, apiBaseUrl, apiModelName }: Dictionary
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ text, apiKey: apiKeyRef.current, apiBaseUrl: apiBaseUrlRef.current, apiModelName: apiModelNameRef.current }),
+          body: JSON.stringify({ text, apiKey: apiKeyRef.current }),
         });
 
         if (!response.ok) {
@@ -92,7 +85,7 @@ export function DictionaryPopup({ apiKey, apiBaseUrl, apiModelName }: Dictionary
     return () => document.removeEventListener('mouseup', handleMouseUp);
   }, []);
 
-  return createPortal(
+  return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -104,7 +97,7 @@ export function DictionaryPopup({ apiKey, apiBaseUrl, apiModelName }: Dictionary
             position: 'absolute',
             left: Math.min(position.x, window.innerWidth - 320), // Prevent going off-screen
             top: position.y,
-            zIndex: 99999,
+            zIndex: 50,
           }}
           className="bg-white rounded-2xl shadow-xl border-2 border-indigo-100 w-80 overflow-hidden"
         >
@@ -137,7 +130,6 @@ export function DictionaryPopup({ apiKey, apiBaseUrl, apiModelName }: Dictionary
           </div>
         </motion.div>
       )}
-    </AnimatePresence>,
-    document.body
+    </AnimatePresence>
   );
 }

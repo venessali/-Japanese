@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, MessageSquare, Send, GripHorizontal, Plus, Edit2, Check, Bot } from 'lucide-react';
 import { Vocabulary, Grammar } from '../types';
+import { GoogleGenAI, Type } from '@google/genai';
 import Markdown from 'react-markdown';
 
 interface AIChatPanelProps {
@@ -11,9 +12,6 @@ interface AIChatPanelProps {
   grammarList: Grammar[];
   onAddVocab: (vocab: Omit<Vocabulary, 'id' | 'createdAt' | 'lastReviewed' | 'uid'>) => void;
   onAddGrammar: (grammar: Omit<Grammar, 'id' | 'createdAt' | 'lastReviewed' | 'uid'>) => void;
-  apiKey?: string;
-  apiBaseUrl?: string;
-  apiModelName?: string;
 }
 
 interface Message {
@@ -25,7 +23,7 @@ interface Message {
   suggestedGrammar?: Array<{ pattern: string; meaning: string; example: string; notes: string }>;
 }
 
-export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVocab, onAddGrammar, apiKey, apiBaseUrl, apiModelName }: AIChatPanelProps) {
+export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVocab, onAddGrammar }: AIChatPanelProps) {
   const [aiName, setAiName] = useState('AI 助教');
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -44,6 +42,72 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
   const [isLoading, setIsLoading] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<any>(null);
+
+  // Initialize Gemini Chat
+  useEffect(() => {
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      chatRef.current = ai.chats.create({
+        model: 'gemini-3-flash-preview',
+        config: {
+          systemInstruction: `You are a helpful Japanese learning assistant named ${aiName}.
+The user currently has ${vocabList.length} vocabulary words (${vocabList.filter(v => v.tag === 'mastered').length} mastered) and ${grammarList.length} grammar points (${grammarList.filter(g => g.tag === 'mastered').length} mastered).
+Adjust the complexity of your explanations based on their level.
+If the user asks about a specific word or grammar point, explain it clearly.
+You can suggest related vocabulary or grammar points that the user might find useful.
+Always return your response in the specified JSON format.
+The 'reply' field should contain your main message in Markdown.
+The 'suggestedVocab' and 'suggestedGrammar' fields should contain any new items you want to suggest adding to their study list.`,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reply: { type: Type.STRING, description: 'The AI reply to the user in Markdown format.' },
+              suggestedVocab: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    word: { type: Type.STRING },
+                    reading: { type: Type.STRING },
+                    meaning: { type: Type.STRING },
+                    notes: { type: Type.STRING }
+                  }
+                }
+              },
+              suggestedGrammar: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    pattern: { type: Type.STRING },
+                    meaning: { type: Type.STRING },
+                    example: { type: Type.STRING },
+                    notes: { type: Type.STRING }
+                  }
+                }
+              }
+            },
+            required: ['reply']
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Failed to initialize Gemini API:", error);
+    }
+  }, [aiName, vocabList.length, grammarList.length]);
+
+  // Update welcome message when name changes
+  useEffect(() => {
+    setMessages(prev => {
+      const newMessages = [...prev];
+      if (newMessages[0] && newMessages[0].id === 'welcome') {
+        newMessages[0].text = `你好！我是你的专属日语学习助手 **${aiName}**。你可以随时向我提问，或者开启“拖拽模式”将不懂的词句拖进来问我哦！`;
+      }
+      return newMessages;
+    });
+  }, [aiName]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,7 +115,7 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading]);
+  }, [messages]);
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!isDragMode) return;
@@ -67,19 +131,22 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
     if (!isDragMode) return;
     e.preventDefault();
     setIsDraggingOver(false);
-    const text = e.dataTransfer.getData('text/plain');
+    
+    const text = e.dataTransfer.getData('text');
     if (text && text.trim()) {
-      setTags(prev => [...new Set([...prev, text.trim()])]);
+      const newTag = text.trim().substring(0, 50); // Limit length
+      if (!tags.includes(newTag)) {
+        setTags([...tags, newTag]);
+      }
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(prev => prev.filter(t => t !== tagToRemove));
+    setTags(tags.filter(t => t !== tagToRemove));
   };
 
-  // AI Chat Handler
   const handleSend = async () => {
-    if ((!input.trim() && tags.length === 0) || isLoading) return;
+    if ((!input.trim() && tags.length === 0) || isLoading || !chatRef.current) return;
 
     const userMessageText = input.trim();
     const currentTags = [...tags];
@@ -95,12 +162,6 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
     setInput('');
     setTags([]);
     setIsLoading(true);
-    
-    // Reset textarea height
-    const textarea = document.querySelector('textarea[placeholder^="输入问题"]');
-    if (textarea instanceof HTMLTextAreaElement) {
-      textarea.style.height = 'auto';
-    }
 
     try {
       let prompt = userMessageText;
@@ -108,60 +169,35 @@ export function AIChatPanel({ isOpen, onClose, vocabList, grammarList, onAddVoca
         prompt = `关于以下内容：[${currentTags.join(', ')}]\n${userMessageText}`;
       }
 
-      const systemInstruction = `You are a helpful Japanese learning assistant named ${aiName}.
-The user currently has ${vocabList.length} vocabulary words (${vocabList.filter(v => v.tag === 'mastered').length} mastered) and ${grammarList.length} grammar points (${grammarList.filter(g => g.tag === 'mastered').length} mastered).
-Adjust the complexity of your explanations based on their level.
-If the user asks about a specific word or grammar point, explain it clearly.
-You can suggest related vocabulary or grammar points that the user might find useful.
-Always return your response in the specified JSON format.
-The 'reply' field should contain your main message in Markdown.
-The 'suggestedVocab' and 'suggestedGrammar' fields should contain any new items you want to suggest adding to their study list.
-JSON Schema:
-{
-  "reply": "string (markdown)",
-  "suggestedVocab": [{"word": "string", "reading": "string", "meaning": "string", "notes": "string"}],
-  "suggestedGrammar": [{"pattern": "string", "meaning": "string", "example": "string", "notes": "string"}]
-}`;
-
-      const chatHistory = messages.map(m => ({
-        role: m.role === 'model' ? 'assistant' : 'user',
-        content: m.text
-      }));
-
-      const response = await fetch('/api/ai-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...chatHistory, { role: 'user', content: prompt }],
-          systemInstruction,
-          apiKey,
-          apiBaseUrl,
-          apiModelName
-        })
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'AI Chat failed');
-      }
-      const parsed = await response.json();
+      const response = await chatRef.current.sendMessage({ message: prompt });
+      const responseText = response.text;
       
-      if (parsed) {
-        const newModelMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'model',
-          text: parsed.reply || '抱歉，我没有理解你的意思。',
-          suggestedVocab: parsed.suggestedVocab,
-          suggestedGrammar: parsed.suggestedGrammar
-        };
-        setMessages(prev => [...prev, newModelMessage]);
+      if (responseText) {
+        try {
+          const parsed = JSON.parse(responseText);
+          const newModelMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'model',
+            text: parsed.reply || '抱歉，我没有理解你的意思。',
+            suggestedVocab: parsed.suggestedVocab,
+            suggestedGrammar: parsed.suggestedGrammar
+          };
+          setMessages(prev => [...prev, newModelMessage]);
+        } catch (parseError) {
+          console.error("Failed to parse JSON response:", parseError);
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'model',
+            text: responseText
+          }]);
+        }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error sending message:", error);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'model',
-        text: `抱歉，请求失败：${error.message || '网络似乎出了点问题，请稍后再试。'}`
+        text: '抱歉，网络似乎出了点问题，请稍后再试。'
       }]);
     } finally {
       setIsLoading(false);
@@ -386,21 +422,16 @@ JSON Schema:
                   <div className="flex items-end gap-2">
                     <textarea
                       value={input}
-                      onChange={(e) => {
-                        setInput(e.target.value);
-                        e.target.style.height = 'auto';
-                        e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`;
-                      }}
+                      onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
                           handleSend();
                         }
                       }}
-                      placeholder="输入问题，按 Cmd/Ctrl + Enter 发送..."
+                      placeholder="输入问题，按 Enter 发送..."
                       className="flex-1 max-h-32 min-h-[40px] p-2 bg-transparent resize-none focus:outline-none text-sm"
                       rows={1}
-                      style={{ overflowY: 'auto' }}
                     />
                     <button
                       onClick={handleSend}
