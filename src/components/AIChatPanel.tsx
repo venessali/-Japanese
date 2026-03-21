@@ -375,12 +375,12 @@ JSON Schema:
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                           e.preventDefault();
                           handleSend();
                         }
                       }}
-                      placeholder="输入问题，按 Enter 发送..."
+                      placeholder="输入问题，按 Cmd/Ctrl + Enter 发送..."
                       className="flex-1 max-h-32 min-h-[40px] p-2 bg-transparent resize-none focus:outline-none text-sm"
                       rows={1}
                     />
