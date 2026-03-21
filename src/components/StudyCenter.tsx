@@ -4,7 +4,6 @@ import { BookOpen, Library, Search, Edit2, Trash2, Plus, X, Save, Wand2, Loader2
 import { format } from 'date-fns';
 import { VocabDetailModal, GrammarDetailModal } from './DetailModals';
 import { ConfirmModal } from './ConfirmModal';
-import { GoogleGenAI, Type } from '@google/genai';
 
 interface StudyCenterProps {
   vocabList: Vocabulary[];
